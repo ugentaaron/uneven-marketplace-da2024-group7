@@ -4,13 +4,9 @@ from datetime import datetime
 db = SQLAlchemy()
 
 class Category(db.Model):
-    __tablename__ = 'category'
-
     id = db.Column(db.String, primary_key=True)
 
 class User(db.Model):
-    __tablename__ ='user'
-
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     listings = db.relationship('Listing', backref='user', lazy=True)
@@ -22,8 +18,6 @@ class User(db.Model):
         return f'<User {self.username}>'
     
 class Listing(db.Model):
-    __tablename__ = 'listing'
-
     id = db.Column(db.Integer(8), primary_key=True)
     listingTitle = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -38,13 +32,11 @@ class Listing(db.Model):
 
 
     def __repr__(self):
-        return f'<Listing {self.listingTitle}, ${self.price}>'
+        return f'<Listing {self.listing_name}, ${self.price}>'
 
 
 
 class Transaction(db.Model):
-    __tablename__ = 'transaction'
-
     id = db.Column(db.Integer(8), primary_key=True)
     status = db.Column(db.Boolean, nullable=False)
     buyerID = db.Column(db.Integer(8), db.ForeignKey('user.id'), nullable=False)
@@ -52,13 +44,10 @@ class Transaction(db.Model):
     createdAt = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     startDate = db.Column(db.Date, nullable=False)
     endDate = db.Column(db.Date, nullable=False)
-    
-    buyer = db.relationship('User', backref='transactions', lazy=True)
-    listing = db.relationship('Listing', backref='transactions', lazy=True)
 
 
     def __repr__(self):
-        return f'<Transaction {self.listingID}, {self.status}, {self.listingID}'
+        return f'<Transaction'
 
 
 class Notification(db.Model):
@@ -86,3 +75,6 @@ class Review(db.Model):
 
     def __repr__(self):
         return f"<Review {self.reviewID}, Rating: {self.rating}>"
+
+
+
