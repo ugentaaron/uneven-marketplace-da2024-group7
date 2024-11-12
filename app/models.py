@@ -32,7 +32,7 @@ class Listing(db.Model):
 
 
     def __repr__(self):
-        return f'<Listing {self.listingTitle}, ${self.price}>'
+        return f'<Listing {self.listing_name}, ${self.price}>'
 
 
 
@@ -44,13 +44,10 @@ class Transaction(db.Model):
     createdAt = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     startDate = db.Column(db.Date, nullable=False)
     endDate = db.Column(db.Date, nullable=False)
-    
-    buyer = db.relationship('User', backref='transactions', lazy=True)
-    listing = db.relationship('Listing', backref='transactions', lazy=True)
 
 
     def __repr__(self):
-        return f'<Transaction {self.listingID}, {self.status}, {self.listingID}'
+        return f'<Transaction'
 
 
 class Notification(db.Model):
@@ -78,3 +75,6 @@ class Review(db.Model):
 
     def __repr__(self):
         return f"<Review {self.reviewID}, Rating: {self.rating}>"
+
+
+
