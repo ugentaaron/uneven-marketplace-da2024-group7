@@ -86,6 +86,3 @@ class Review(db.Model):
 
     def __repr__(self):
         return f"<Review {self.reviewID}, Rating: {self.rating}>"
-
-
-
