@@ -4,9 +4,13 @@ from datetime import datetime
 db = SQLAlchemy()
 
 class Category(db.Model):
+    __tablename__ = 'category'
+
     id = db.Column(db.String, primary_key=True)
 
 class User(db.Model):
+    __tablename__ ='user'
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     listings = db.relationship('Listing', backref='user', lazy=True)
@@ -18,6 +22,8 @@ class User(db.Model):
         return f'<User {self.username}>'
     
 class Listing(db.Model):
+    __tablename__ = 'listing'
+
     id = db.Column(db.Integer(8), primary_key=True)
     listingTitle = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
@@ -37,6 +43,8 @@ class Listing(db.Model):
 
 
 class Transaction(db.Model):
+    __tablename__ = 'transaction'
+
     id = db.Column(db.Integer(8), primary_key=True)
     status = db.Column(db.Boolean, nullable=False)
     buyerID = db.Column(db.Integer(8), db.ForeignKey('user.id'), nullable=False)
