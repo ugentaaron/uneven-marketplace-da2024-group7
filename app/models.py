@@ -13,10 +13,10 @@ class User(db.Model):
 
     id = db.Column('userID', db.Integer, primary_key=True)
     username = db.Column('userName', db.String(80), unique=True, nullable=False)
-    listings = db.relationship('Listing', backref='user', lazy=True)
     email = db.Column(db.String(120), unique=True, nullable=True)
     review_score = db.Column('reviewScore', db.Integer, default=0)
     created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow)
+    transactions = db.relationship('Transaction', back_populates='buyer', primaryjoin="User.id == Transaction.buyer_id")
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -27,7 +27,7 @@ class Listing(db.Model):
     id = db.Column('listingID', db.Integer, primary_key=True)  
     listing_title = db.Column('listingTitle', db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
-    provider_id = db.Column('providerID', db.Integer, db.ForeignKey('User.userID'), nullable=False) 
+    provider_id = db.Column('providerID', db.Integer, db.ForeignKey('User.userID'), nullable=False)
     description = db.Column(db.String, nullable=True)
     picture = db.Column(db.String, nullable=True)
     status = db.Column('status', db.String, nullable=False)
