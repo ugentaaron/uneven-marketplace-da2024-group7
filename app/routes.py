@@ -130,10 +130,10 @@ def search():
             query = query.filter(Listing.available_start >= start_date, Listing.available_end <= end_date)
         
         listings = query.all()
-        return render_template('advanced_search_results.html', listings=listings)
+        return render_template('search_results.html', listings=listings)
 
     categories = Category.query.all()
-    return render_template('advanced_search.html', categories=categories)
+    return render_template('search.html', categories=categories)
 
 #routes voor transaction
 
