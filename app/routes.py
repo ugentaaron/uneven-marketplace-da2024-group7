@@ -1,7 +1,8 @@
 # app/routes.py
 
-from flask import Blueprint, request, redirect, url_for, render_template, session
+from flask import Blueprint, session, request, redirect, url_for, render_template, session, flash
 from .models import db, User, Listing
+
 
 main = Blueprint('main', __name__)
 
@@ -22,9 +23,13 @@ def register():
             db.session.add(new_user)
             db.session.commit()
             session['user_id'] = new_user.id
+            flash("Registration successful!", "success")
             return redirect(url_for('main.index'))
-        return 'Username already registered'
+        flash("Username already registered", "danger")
     return render_template('register.html')
+
+
+
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():

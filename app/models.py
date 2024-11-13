@@ -11,12 +11,12 @@ class Category(db.Model):
 class User(db.Model):
     __tablename__ ='user'
 
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
+    id = db.Column('userID', db.Integer, primary_key=True)
+    username = db.Column('userName', db.String(80), unique=True, nullable=False)
     listings = db.relationship('Listing', backref='user', lazy=True)
-    email = db.Column(db.String, nullable=False)
-    reviewScore = db.Column(db.Integer, nullable=True)
-    createdAt = db.Column(db.DateTime, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    review_score = db.Column('reviewScore', db.Integer, default=0)
+    created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -24,17 +24,18 @@ class User(db.Model):
 class Listing(db.Model):
     __tablename__ = 'listing'
 
-    id = db.Column(db.Integer(8), primary_key=True)
-    listingTitle = db.Column(db.String(100), nullable=False)
+    id = db.Column('listingID', db.Integer, primary_key=True)  
+    listing_title = db.Column('listingTitle', db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
-    providerID = db.Column(db.Integer(8), db.ForeignKey('user.id'), nullable=False)
-    description = db.Column(db.String(500), nullable=True)
-    picture = db.Column(db.String, nullable=False)
-    status = db.Column(db.Boolean, nullable=False)
+    provider_id = db.Column('providerID', db.Integer, db.ForeignKey('User.userID'), nullable=False) 
+    description = db.Column(db.String, nullable=True)
+    picture = db.Column(db.String, nullable=True)
+    status = db.Column('status', db.String, nullable=False)
     location = db.Column(db.String, nullable=False)
-    available_start = db.Column(db.Date, nullable=False)
-    available_end = db.Column(db.Date, nullable=False)
-    createdAt = db.Column(db.DateTime, nullable=False)
+    available_start = db.Column('availableStart', db.Date, nullable=False)
+    available_end = db.Column('availableEnd', db.Date, nullable=False)
+    created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow, nullable=False)
+
 
 
     def __repr__(self):
@@ -45,28 +46,29 @@ class Listing(db.Model):
 class Transaction(db.Model):
     __tablename__ = 'transaction'
 
-    id = db.Column(db.Integer(8), primary_key=True)
-    status = db.Column(db.Boolean, nullable=False)
-    buyerID = db.Column(db.Integer(8), db.ForeignKey('user.id'), nullable=False)
-    listingID = db.Column(db.Integer(8), db.ForeignKey('listing.id'), nullable=False)
-    createdAt = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    startDate = db.Column(db.Date, nullable=False)
-    endDate = db.Column(db.Date, nullable=False)
+    id = db.Column('transactionID', db.Integer, primary_key=True) 
+    status = db.Column('status', db.String, nullable=False)
+    buyer_id = db.Column('buyerID', db.Integer, db.ForeignKey('User.userID'), nullable=False)
+    listing_id = db.Column('listingID', db.Integer, db.ForeignKey('Listing.listingID'), nullable=False)
+    created_at = db.Column('createdAt', db.DateTime, nullable=False, default=datetime.utcnow)
+    start_date = db.Column('startDate', db.Date, nullable=False)
+    end_date = db.Column('endDate', db.Date, nullable=False)
     
     buyer = db.relationship('User', backref='transactions', lazy=True)
     listing = db.relationship('Listing', backref='transactions', lazy=True)
 
 
-    def __repr__(self):
+
+    def __repr__(self): 
         return f'<Transaction {self.listingID}, {self.status}, {self.listingID}'
 
 
 class Notification(db.Model):
     __tablename__ = 'notification'
 
-    notificationID = db.Column(db.Integer(8), primary_key=True)  
-    receiverID = db.Column(db.Integer(8), nullable=False)  
-    createdAt = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())  
+    notification_id = db.Column('notificationID', db.Integer, primary_key=True)  
+    receiver_id = db.Column('receiverID', db.Integer, db.ForeignKey('User.userID'), nullable=False)  
+    created_at = db.Column('createdAt', db.DateTime, nullable=False, default=db.func.current_timestamp())  
     viewed = db.Column(db.Boolean, nullable=False, default=False)  
     type = db.Column(db.String, nullable=False)  
 
@@ -77,10 +79,10 @@ class Notification(db.Model):
 class Review(db.Model):
     __tablename__ = 'review'
 
-    reviewID = db.Column(db.Integer(8), primary_key=True)  
-    createdAt = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())  
-    reviewedID = db.Column(db.Integer(8), db.ForeignKey('user.userID'), nullable=False)  
-    listingID = db.Column(db.Integer, db.ForeignKey('listing.listingID'), nullable=False)  
+    review_id = db.Column('reviewID', db.Integer, primary_key=True)  
+    created_at = db.Column('createdAt', db.DateTime, nullable=False, default=db.func.current_timestamp())  
+    reviewed_id = db.Column('reviewedID', db.Integer, db.ForeignKey('User.userID'), nullable=False)  
+    listing_id = db.Column('listingID', db.Integer, db.ForeignKey('Listing.listingID'), nullable=False)  
     rating = db.Column(db.Integer, nullable=False)  
     comment = db.Column(db.Text, nullable=True)  
 
