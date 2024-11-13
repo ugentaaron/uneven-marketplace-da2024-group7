@@ -9,11 +9,13 @@ main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
+    all_listings = Listing.query.all()
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
+        all_listings = Listing.query.all()
         listings = Listing.query.filter_by(provider_id=user.id).all()  # Gebruik provider_id
-        return render_template('index.html', username=user.username, listings=listings)
-    return render_template('index.html', username=None)
+        return render_template('index.html', username=user.username, listings=listings, all_listings=all_listings)
+    return render_template('index.html', username=None, all_listings=all_listings)
 
 @main.route('/register', methods=['GET', 'POST'])
 def register():
@@ -39,7 +41,8 @@ def login():
         if user:
             session['user_id'] = user.id
             return redirect(url_for('main.index'))
-        return 'User not found'
+        else:
+            flash("User not found. Please try again.", "danger")
     return render_template('login.html')
 
 @main.route('/logout', methods=['POST'])
@@ -155,16 +158,6 @@ def start_transaction(listing_id):
 
     return redirect(url_for('main.transaction_details', transaction_id=new_transaction.id))
 
-@main.route('/transaction/<int:transaction_id>', methods=['GET'])
-def transaction_details(transaction_id):
-    if 'user_id' not in session:
-        return redirect(url_for('main.login'))
-
-    transaction = Transaction.query.get(transaction_id)
-    if transaction and transaction.buyer_id == session['user_id']:  # Gebruik buyer_id
-        return render_template('transaction_details.html', transaction=transaction)
-
-    return 'Transactie niet gevonden', 404
 
 @main.route('/transaction/complete/<int:transaction_id>', methods=['POST'])
 def complete_transaction(transaction_id):
@@ -246,10 +239,10 @@ def dashboard():
         return redirect(url_for('main.login'))
 
     user = User.query.get(session['user_id'])
-    active_listings = Listing.query.filter_by(provider_id=user.id, status=True).all()  # Gebruik provider_id
-    transactions = Transaction.query.filter_by(buyer_id=user.id).all()  # Gebruik buyer_id
-    reviews = Review.query.filter_by(reviewed_id=user.id).all()  # Gebruik reviewed_id
-    notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()  # Gebruik receiver_id
+    active_listings = Listing.query.filter_by(provider_id=user.id, status=True).all()  
+    transactions = Transaction.query.filter_by(buyer_id=user.id).all() 
+    reviews = Review.query.filter_by(reviewed_id=user.id).all() 
+    notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()
 
     return render_template('dashboard.html', user=user, listings=active_listings,
                            transactions=transactions, reviews=reviews, notifications=notifications)
@@ -261,7 +254,7 @@ def my_listings():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
 
-    listings = Listing.query.filter_by(provider_id=session['user_id']).all()  # Gebruik provider_id
+    listings = Listing.query.filter_by(provider_id=session['user_id']).all() 
     return render_template('my_listings.html', listings=listings)
 
 @main.route('/edit-listing/<int:listing_id>', methods=['GET', 'POST'])
@@ -270,11 +263,11 @@ def edit_listing(listing_id):
         return redirect(url_for('main.login'))
 
     listing = Listing.query.get(listing_id)
-    if listing.provider_id != session['user_id']:  # Gebruik provider_id
+    if listing.provider_id != session['user_id']: 
         return 'Niet geautoriseerd', 403
 
     if request.method == 'POST':
-        listing.listing_title = request.form['listingTitle']  # Gebruik listing_title
+        listing.listing_title = request.form['listingTitle'] 
         listing.price = float(request.form['price'])
         listing.description = request.form['description']
         listing.status = 'status' in request.form
@@ -286,3 +279,43 @@ def edit_listing(listing_id):
 
     return render_template('edit_listing.html', listing=listing)
     
+from datetime import datetime
+
+@main.route('/listing/<int:listing_id>', methods=['GET', 'POST'])
+def view_listing(listing_id):
+    listing = Listing.query.get_or_404(listing_id)
+    
+    if request.method == 'POST':
+        if 'user_id' not in session:
+            flash("Please log in to make a purchase.", "danger")
+            return redirect(url_for('main.login'))
+
+        start_date = request.form.get('start_date') or listing.available_start
+        end_date = request.form.get('end_date') or listing.available_end
+
+        new_transaction = Transaction(
+            listing_id=listing.id,
+            buyer_id=session['user_id'],
+            status="pending",  
+            start_date=start_date,
+            end_date=end_date,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_transaction)
+        db.session.commit()
+        
+        flash("Transaction created successfully!", "success")
+        return redirect(url_for('main.transaction_details', transaction_id=new_transaction.id))
+
+    return render_template('view_listing.html', listing=listing)
+
+@main.route('/transaction/<int:transaction_id>', methods=['GET'])
+def transaction_details(transaction_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    transaction = Transaction.query.get(transaction_id)
+    if transaction and transaction.buyer_id == session['user_id']:  # Gebruik buyer_id
+        return render_template('transaction_details.html', transaction=transaction)
+
+    return 'Transactie niet gevonden', 404

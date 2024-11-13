@@ -59,6 +59,47 @@
                         <a href="{{ url_for('main.add_listing') }}" class="btn btn-primary">Add Listing</a>
                     </div>
                 {% endif %}
+
+                <div class="text-center container my-5">
+                  <h2 class="mb-4">All Listings</h2>
+                  
+                  {% if all_listings %}
+                      <table class="table table-striped">
+                          <thead>
+                              <tr>
+                                  <th>Title</th>
+                                  <th>Price</th>
+                                  <th>Location</th>
+                                  <th>Provider</th>
+                                  <th>Available Start</th>
+                                  <th>Available End</th>
+                                  <th>Details</th>
+                                  <th>Buy</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% for listing in all_listings %}
+                                  <tr>
+                                      <td>{{ listing.listing_title }}</td>
+                                      <td>${{ "%.2f"|format(listing.price) }}</td>
+                                      <td>{{ listing.location }}</td>
+                                      <td>{{ listing.user.username }}</td>
+                                      <td>{{ listing.available_start }}</td>
+                                      <td>{{ listing.available_end }}</td>
+                                      <td>
+                                        <a href="{{ url_for('main.view_listing', listing_id=listing.id) }}" class="btn btn-primary btn-sm">View</a>
+                                    </td>
+                                    <td>
+                                      <a href="{{ url_for('main.view_listing', listing_id=listing.id) }}" class="btn btn-success btn-sm">Rent</a>
+                                    </td>
+                                  </tr>
+                              {% endfor %}
+                          </tbody>
+                      </table>
+                  {% else %}
+                      <p>No listings available.</p>
+                  {% endif %}
+              </div>
             </div>
         {% else %}
             <div class="text-center">

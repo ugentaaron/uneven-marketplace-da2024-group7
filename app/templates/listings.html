@@ -7,11 +7,15 @@
     <title>All Listings</title>
 </head>
 <body>
+
+    <!-- Header -->
+    {% include 'header.html' %}
+
     <div class="container mt-4">
         <h1 class="text-center">All Listings</h1>
-        <div class="text-center mb-4">
+       <!-- <div class="text-center mb-4">
             <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Return to Home</a>
-        </div>
+        </div>-->
         
         {% if listings %}
             <div class="row">
