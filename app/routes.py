@@ -101,3 +101,34 @@ def delete_notification(notification_id):
         return redirect(url_for('main.notifications'))
 
     return 'Notificatie niet gevonden', 404
+
+#route voor search
+
+@main.route('/search', methods=['GET', 'POST'])
+def search():
+    if request.method == 'POST':
+        location = request.form.get('location')
+        max_price = request.form.get('max_price')
+        category_id = request.form.get('category_id')
+        
+        query = Listing.query
+
+        if location:
+            query = query.filter(Listing.location.ilike(f"%{location}%"))
+
+        if max_price:
+            try:
+                max_price = float(max_price)
+                query = query.filter(Listing.price <= max_price)
+            except ValueError:
+                pass
+
+        if category_id:
+            query = query.filter(Listing.category_id == category_id)
+
+        search_results = query.all()
+
+        return render_template('search_results.html', listings=search_results)
+
+    categories = Category.query.all()
+    return render_template('search.html', categories=categories)
