@@ -61,3 +61,43 @@ def add_listing():
 def listings():
     all_listings = Listing.query.all()
     return render_template('listings.html', listings=all_listings)
+
+#routes voor notifications
+
+@main.route('/notifications', methods=['GET'])
+def notifications():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    user_id = session['user_id']
+    user_notifications = Notification.query.filter_by(receiverID=user_id).all()
+
+    return render_template('notifications.html', notifications=user_notifications)
+
+@main.route('/notification/<int:notification_id>/view', methods=['POST'])
+def view_notification(notification_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    notification = Notification.query.get(notification_id)
+
+    if notification and notification.receiverID == session['user_id']:
+        notification.viewed = True
+        db.session.commit()
+        return redirect(url_for('main.notifications'))
+
+    return 'Notificatie niet gevonden of niet geautoriseerd', 404
+
+@main.route('/notification/<int:notification_id>/delete', methods=['POST'])
+def delete_notification(notification_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    notification = Notification.query.get(notification_id)
+    
+    if notification and notification.receiverID == session['user_id']:
+        db.session.delete(notification)
+        db.session.commit()
+        return redirect(url_for('main.notifications'))
+
+    return 'Notificatie niet gevonden', 404
