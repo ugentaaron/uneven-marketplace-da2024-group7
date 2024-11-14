@@ -54,14 +54,22 @@ def logout():
 def add_listing():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
-    
+
     if request.method == 'POST':
-        listing_title = request.form['listingTitle']
-        price = float(request.form['price'])
-        new_listing = Listing(listing_title=listing_title, price=price, provider_id=session['user_id'])  # Gebruik provider_id
+        new_listing = Listing(
+            listing_title=request.form['listing_name'],
+            price=float(request.form['price']),
+            location=request.form['location'],
+            available_start=request.form['available_start'],
+            available_end=request.form['available_end'],
+            description=request.form['description'],
+            status=request.form['status'],
+            provider_id=session['user_id'],  # Assuming the logged-in user is the provider
+            created_at=datetime.utcnow()
+        )
         db.session.add(new_listing)
         db.session.commit()
-        return redirect(url_for('main.listings'))
+        return redirect(url_for('main.index'))
 
     return render_template('add_listing.html')
 
