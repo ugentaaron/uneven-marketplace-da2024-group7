@@ -13,7 +13,7 @@ def index():
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         all_listings = Listing.query.all()
-        listings = Listing.query.filter_by(provider_id=user.id).all()  # Gebruik provider_id
+        listings = Listing.query.filter_by(provider_id=user.id).all() 
         return render_template('index.html', username=user.username, listings=listings, all_listings=all_listings)
     return render_template('index.html', username=None, all_listings=all_listings)
 
@@ -64,7 +64,7 @@ def add_listing():
             available_end=request.form['available_end'],
             description=request.form['description'],
             status=request.form['status'],
-            provider_id=session['user_id'],  # Assuming the logged-in user is the provider
+            provider_id=session['user_id'], 
             created_at=datetime.utcnow()
         )
         db.session.add(new_listing)
@@ -86,7 +86,7 @@ def notifications():
         return redirect(url_for('main.login'))
 
     user_id = session['user_id']
-    user_notifications = Notification.query.filter_by(receiver_id=user_id).all()  # Gebruik receiver_id
+    user_notifications = Notification.query.filter_by(receiver_id=user_id).all()
 
     return render_template('notifications.html', notifications=user_notifications)
 
@@ -97,7 +97,7 @@ def view_notification(notification_id):
 
     notification = Notification.query.get(notification_id)
 
-    if notification and notification.receiver_id == session['user_id']:  # Gebruik receiver_id
+    if notification and notification.receiver_id == session['user_id']: 
         notification.viewed = True
         db.session.commit()
         return redirect(url_for('main.notifications'))
@@ -111,7 +111,7 @@ def delete_notification(notification_id):
 
     notification = Notification.query.get(notification_id)
     
-    if notification and notification.receiver_id == session['user_id']:  # Gebruik receiver_id
+    if notification and notification.receiver_id == session['user_id']:
         db.session.delete(notification)
         db.session.commit()
         return redirect(url_for('main.notifications'))
@@ -154,8 +154,8 @@ def start_transaction(listing_id):
         return redirect(url_for('main.login'))
 
     new_transaction = Transaction(
-        listing_id=listing_id,  # Gebruik listing_id
-        buyer_id=session['user_id'],  # Gebruik buyer_id
+        listing_id=listing_id,
+        buyer_id=session['user_id'], 
         status=False,
         start_date=request.form['start_date'],
         end_date=request.form['end_date'],
@@ -173,8 +173,8 @@ def complete_transaction(transaction_id):
         return redirect(url_for('main.login'))
 
     transaction = Transaction.query.get(transaction_id)
-    if transaction and transaction.buyer_id == session['user_id']:  # Gebruik buyer_id
-        transaction.status = True  # Markeer als voltooid
+    if transaction and transaction.buyer_id == session['user_id']:  
+        transaction.status = True 
         db.session.commit()
         return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
 
@@ -205,7 +205,7 @@ def user_reviews(user_id):
     if not user:
         return 'Gebruiker niet gevonden', 404
 
-    reviews = Review.query.filter_by(reviewed_id=user.id).all()  # Gebruik reviewed_id
+    reviews = Review.query.filter_by(reviewed_id=user.id).all()  
     return render_template('user_reviews.html', user=user, reviews=reviews)
 
 @main.route('/user/<int:user_id>/review/add', methods=['GET', 'POST'])
@@ -236,7 +236,7 @@ def my_reviews():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
 
-    reviews = Review.query.filter_by(reviewed_id=session['user_id']).all()  # Gebruik reviewed_id
+    reviews = Review.query.filter_by(reviewed_id=session['user_id']).all() 
     return render_template('my_reviews.html', reviews=reviews)
 
 #routes voor dashboard
@@ -323,7 +323,7 @@ def transaction_details(transaction_id):
         return redirect(url_for('main.login'))
 
     transaction = Transaction.query.get(transaction_id)
-    if transaction and transaction.buyer_id == session['user_id']:  # Gebruik buyer_id
+    if transaction and transaction.buyer_id == session['user_id']: 
         return render_template('transaction_details.html', transaction=transaction)
 
     return 'Transactie niet gevonden', 404
