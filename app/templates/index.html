@@ -45,7 +45,7 @@
                                 <div class="card shadow-sm">
                                     <div class="card-body">
                                         <h5 class="card-title">{{ listing.listing_title }}</h5>
-                                        <p class="card-text"><strong>Price:</strong> ${{ "%.2f"|format(listing.price) }}</p>
+                                        <p class="card-text"><strong>Price:</strong> ${{ "%.2f"|format(listing.price_per_day) }}</p>
                                         <p class="card-text"><strong>Location:</strong> {{ listing.location }}</p>
                                         <p class="card-text">{{ listing.description }}</p>
                                     </div>

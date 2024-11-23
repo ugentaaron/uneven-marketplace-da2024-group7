@@ -57,47 +57,58 @@ def logout():
 @main.route('/add-listing', methods=['GET', 'POST'])
 def add_listing():
     if 'user_id' not in session:
-        return redirect(url_for('main.login'))
+        return redirect(url_for('main.login', next=request.url))
 
     if request.method == 'POST':
-        new_listing = Listing(
-            listing_title=request.form['listing_name'],
-            price_per_day=float(request.form['price']),
-            location=request.form['location'],
-            available_start=request.form['available_start'],
-            available_end=request.form['available_end'],
-            description=request.form['description'],
-            status=request.form['status'],
-            provider_id=session['user_id'],
-            created_at=datetime.utcnow()
-        )
-        db.session.add(new_listing)
-        db.session.commit()
+        try:
+            # Add Listing
+            new_listing = Listing(
+                listing_title=request.form['listing_name'],
+                price_per_day=float(request.form['price']),
+                location=request.form['location'],
+                available_start=request.form['available_start'],
+                available_end=request.form['available_end'],
+                description=request.form['description'],
+                status=request.form.get('status', 'active'),
+                provider_id=session['user_id'],
+                created_at=datetime.utcnow()
+            )
+            db.session.add(new_listing)
 
-        # Handle categories (many-to-many)
-        selected_categories = request.form.getlist('categories')
-        for category_name in selected_categories:
-            category_listing = CategoryListing(category_name=category_name, listing_id=new_listing.id)
-            db.session.add(category_listing)
-        db.session.commit()
+            # Add Categories
+            selected_categories = request.form.getlist('categories') or []
+            for category_name in selected_categories:
+                category = Category.query.filter_by(name=category_name).first()
+                if category:
+                    category_listing = CategoryListing(categoryName=category.name, listingID=new_listing.id)
+                    db.session.add(category_listing)
 
-        # Handle vehicle (one-to-one)
-        vehicle = Vehicle(
-            listing_id=new_listing.id,
-            make=request.form['make'],
-            year=int(request.form['year']),
-            vehicle_type=request.form['vehicle_type'],
-            fuel_type=request.form['fuel_type'],
-            seats=int(request.form['seats']),
-            extra_features=request.form.get('extra_features', '')
-        )
-        db.session.add(vehicle)
-        db.session.commit()
+            # Add Vehicle
+            vehicle = Vehicle(
+                listing_id=new_listing.id,
+                make=request.form['make'],
+                year=int(request.form['year']),
+                vehicle_type=request.form['vehicle_type'],
+                fuel_type=request.form['fuel_type'],
+                seats=int(request.form['seats']),
+                extra_features=request.form.get('extra_features', '')
+            )
+            db.session.add(vehicle)
 
-        return redirect(url_for('main.index'))
+            # Commit All Changes
+            db.session.commit()
+            flash("Listing added successfully!", "success")
+            return redirect(url_for('main.index'))
 
-    categories = Category.query.all()  # For category selection in the form
+        except Exception as e:
+            db.session.rollback()
+            flash(f"An error occurred: {str(e)}", "danger")
+            return redirect(url_for('main.add_listing'))
+
+    # Fetch Categories for Form
+    categories = Category.query.all()
     return render_template('add_listing.html', categories=categories)
+
 
 @main.route('/listings')
 def listings():
@@ -279,6 +290,21 @@ def edit_listing(listing_id):
         return redirect(url_for('main.my_listings'))
 
     return render_template('edit_listing.html', listing=listing)
+
+@main.route('/delete-listing/<int:listing_id>', methods=['POST'])
+def delete_listing(listing_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    listing = Listing.query.get_or_404(listing_id)
+    if listing.provider_id != session['user_id']:
+        flash("You are not authorized to delete this listing.", "danger")
+        return redirect(url_for('main.my_listings'))
+
+    db.session.delete(listing)
+    db.session.commit()
+    flash("Listing deleted successfully.", "success")
+    return redirect(url_for('main.my_listings'))
 
 
 # View notifications route
