@@ -81,9 +81,9 @@
                               {% for listing in all_listings %}
                                   <tr>
                                       <td>{{ listing.listing_title }}</td>
-                                      <td>${{ "%.2f"|format(listing.price) }}</td>
+                                      <td>${{ "%.2f"|format(listing.price_per_day) }}</td>
                                       <td>{{ listing.location }}</td>
-                                      <td>{{ listing.user.username }}</td>
+                                      <td>{{ listing.provider.username }}</td>
                                       <td>{{ listing.available_start }}</td>
                                       <td>{{ listing.available_end }}</td>
                                       <td>

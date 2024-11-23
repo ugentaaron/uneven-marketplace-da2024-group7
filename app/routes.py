@@ -75,9 +75,9 @@ def add_listing():
         db.session.commit()
 
         # Handle categories (many-to-many)
-        selected_categories = request.form.getlist('categories')  # Expecting a list of category ids
-        for category_id in selected_categories:
-            category_listing = CategoryListing(category_id=category_id, listing_id=new_listing.id)
+        selected_categories = request.form.getlist('categories')
+        for category_name in selected_categories:
+            category_listing = CategoryListing(category_name=category_name, listing_id=new_listing.id)
             db.session.add(category_listing)
         db.session.commit()
 
@@ -85,10 +85,10 @@ def add_listing():
         vehicle = Vehicle(
             listing_id=new_listing.id,
             make=request.form['make'],
-            year=request.form['year'],
+            year=int(request.form['year']),
             vehicle_type=request.form['vehicle_type'],
             fuel_type=request.form['fuel_type'],
-            seats=request.form['seats'],
+            seats=int(request.form['seats']),
             extra_features=request.form.get('extra_features', '')
         )
         db.session.add(vehicle)
@@ -98,6 +98,21 @@ def add_listing():
 
     categories = Category.query.all()  # For category selection in the form
     return render_template('add_listing.html', categories=categories)
+
+@main.route('/listings')
+def listings():
+    all_listings = Listing.query.all()
+    return render_template('listings.html', listings=all_listings)
+
+
+@main.route('/my-listings')
+def my_listings():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    listings = Listing.query.filter_by(provider_id=session['user_id']).all()
+    return render_template('my_listings.html', listings=listings)
+
 
 
 # Listing view route
@@ -130,6 +145,7 @@ def view_listing(listing_id):
     return render_template('view_listing.html', listing=listing)
 
 
+
 # Transaction details route
 @main.route('/transaction/<int:transaction_id>', methods=['GET'])
 def transaction_details(transaction_id):
@@ -149,7 +165,7 @@ def search():
     if request.method == 'POST':
         location = request.form.get('location')
         max_price = request.form.get('max_price')
-        category_id = request.form.get('category_id')
+        category_name = request.form.get('category_name')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
 
@@ -159,8 +175,8 @@ def search():
             query = query.filter(Listing.location.ilike(f"%{location}%"))
         if max_price:
             query = query.filter(Listing.price_per_day <= float(max_price))
-        if category_id:
-            query = query.join(CategoryListing).filter(CategoryListing.category_id == category_id)
+        if category_name:
+            query = query.join(CategoryListing).filter(CategoryListing.category_name == category_name)
         if start_date and end_date:
             query = query.filter(Listing.available_start >= start_date, Listing.available_end <= end_date)
 
@@ -239,15 +255,6 @@ def dashboard():
     return render_template('dashboard.html', user=user, listings=active_listings,
                            transactions=transactions, reviews=reviews, notifications=notifications)
 
-
-# My listings route
-@main.route('/my-listings')
-def my_listings():
-    if 'user_id' not in session:
-        return redirect(url_for('main.login'))
-
-    listings = Listing.query.filter_by(provider_id=session['user_id']).all()
-    return render_template('my_listings.html', listings=listings)
 
 
 # Edit listing route

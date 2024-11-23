@@ -24,8 +24,8 @@
                         <div class="card">
                             <div class="card-body">
                                 <h5 class="card-title">{{ listing.listing_title }}</h5>
-                                <h6 class="card-subtitle mb-2 text-muted">Owner: {{ listing.user.username }}</h6>
-                                <p class="card-text"><strong>Price:</strong> ${{ "%.2f"|format(listing.price) }}</p>
+                                <h6 class="card-subtitle mb-2 text-muted">Owner: {{ listing.provider.username }}</h6>
+                                <p class="card-text"><strong>Price:</strong> ${{ "%.2f"|format(listing.price_per_day) }}</p>
                                 <p class="card-text"><strong>Location:</strong> {{ listing.location }}</p>
                                 <p class="card-text"><strong>Available:</strong> {{ listing.available_start }} to {{ listing.available_end }}</p>
                                 <p class="card-text">{{ listing.description }}</p>

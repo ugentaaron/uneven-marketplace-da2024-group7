@@ -13,9 +13,9 @@
 
     <div class="container my-5">
         <h2>{{ listing.listing_title }}</h2>
-        <p><strong>Price:</strong> ${{ "%.2f"|format(listing.price) }}</p>
+        <p><strong>Price:</strong> ${{ "%.2f"|format(listing.price_per_day) }}</p>
         <p><strong>Location:</strong> {{ listing.location }}</p>
-        <p><strong>Provider:</strong> {{ listing.user.username }}</p>
+        <p><strong>Provider:</strong> {{ listing.provider.username }}</p>
         <p><strong>Available From:</strong> {{ listing.available_start }}</p>
         <p><strong>Available Until:</strong> {{ listing.available_end }}</p>
         <p><strong>Description:</strong> {{ listing.description }}</p>
