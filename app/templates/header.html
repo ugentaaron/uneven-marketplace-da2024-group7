@@ -15,7 +15,12 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.my_listings') }}">My Listings</a>
                 </li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
                 {% if username %}
+                <li class="nav-item">
+                    <span class="navbar-text">Welcome, {{ username }}</span>
+                </li>
                 <li class="nav-item">
                     <form action="{{ url_for('main.logout') }}" method="post" style="display: inline;">
                         <button type="submit" class="btn btn-link nav-link" style="display: inline;">Logout</button>
