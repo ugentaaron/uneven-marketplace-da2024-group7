@@ -4,6 +4,7 @@ from datetime import datetime
 
 main = Blueprint('main', __name__)
 
+
 # 1. User Authentication Routes
 
 # Register route
@@ -30,6 +31,11 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user:
             session['user_id'] = user.id
+            # Als er een 'next' parameter in de URL zit, ga dan naar die URL
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            # Anders stuur naar de homepage
             return redirect(url_for('main.index'))
         else:
             flash("User not found. Please try again.", "danger")
@@ -120,25 +126,31 @@ def add_listing():
 
 
 # Edit listing route
-@main.route('/edit-listing/<int:listing_id>', methods=['GET', 'POST'])
+@main.route('/edit_listing/<int:listing_id>', methods=['GET', 'POST'])
 def edit_listing(listing_id):
+    # Controleer of de gebruiker is ingelogd
     if 'user_id' not in session:
+        flash("Je moet ingelogd zijn om deze actie uit te voeren.", "danger")
         return redirect(url_for('main.login'))
 
-    listing = Listing.query.get(listing_id)
-    if listing.provider_id != session['user_id']:
-        return 'Not authorized', 403
+    user_id = session['user_id']
+
+    # Zoek de listing
+    listing = Listing.query.get_or_404(listing_id)
+
+    # Controleer of de gebruiker de eigenaar is
+    if listing.provider_id != user_id:
+        flash("Je hebt geen toestemming om deze actie uit te voeren.", "danger")
+        return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
-        listing.listing_title = request.form['listingTitle']
-        listing.price_per_day = float(request.form['price'])
-        listing.description = request.form['description']
-        listing.status = 'status' in request.form
-        listing.location = request.form['location']
-        listing.available_start = request.form['available_start']
-        listing.available_end = request.form['available_end']
+        # Update de gegevens van de listing
+        listing.listing_title = request.form.get('listing_title')
+        listing.description = request.form.get('description')
+        listing.price_per_day = float(request.form.get('price_per_day'))
         db.session.commit()
-        return redirect(url_for('main.my_listings'))
+        flash(f"Zoekertje '{listing.listing_title}' is succesvol bijgewerkt.", "success")
+        return redirect(url_for('main.dashboard'))
 
     return render_template('edit_listing.html', listing=listing)
 
@@ -160,21 +172,66 @@ def delete_listing(listing_id):
     return redirect(url_for('main.my_listings'))
 
 
-# My listings route
-@main.route('/my-listings')
-def my_listings():
+# Deactivate listing route
+@main.route('/deactivate_listing/<int:listing_id>', methods=['POST'])
+def deactivate_listing(listing_id):
+    # Controleer of de gebruiker is ingelogd
     if 'user_id' not in session:
+        flash("Je moet ingelogd zijn om deze actie uit te voeren.", "danger")
         return redirect(url_for('main.login'))
 
-    listings = Listing.query.filter_by(provider_id=session['user_id']).all()
-    return render_template('my_listings.html', listings=listings)
+    user_id = session['user_id']
+
+    # Zoek de listing
+    listing = Listing.query.get_or_404(listing_id)
+
+    # Controleer of de gebruiker de eigenaar is
+    if listing.provider_id != user_id:
+        flash("Je hebt geen toestemming om deze actie uit te voeren.", "danger")
+        return redirect(url_for('main.dashboard'))
+
+    # Controleer de status
+    if listing.status != "available":
+        flash("Deze zoekertje is al gedeactiveerd of heeft een andere status.", "warning")
+        return redirect(url_for('main.dashboard'))
+
+    # Update de status naar "deactivated"
+    listing.status = "deactivated"
+    db.session.commit()
+    flash(f"Zoekertje '{listing.listing_title}' is gedeactiveerd.", "success")
+
+    return redirect(url_for('main.dashboard'))
 
 
-# Listings route
-@main.route('/listings')
-def listings():
-    all_listings = Listing.query.all()
-    return render_template('listings.html', listings=all_listings)
+# Activate listing route
+@main.route('/activate_listing/<int:listing_id>', methods=['POST'])
+def activate_listing(listing_id):
+    # Controleer of de gebruiker is ingelogd
+    if 'user_id' not in session:
+        flash("Je moet ingelogd zijn om deze actie uit te voeren.", "danger")
+        return redirect(url_for('main.login'))
+
+    user_id = session['user_id']
+
+    # Zoek de listing op basis van listing_id
+    listing = Listing.query.get_or_404(listing_id)
+
+    # Controleer of de ingelogde gebruiker de eigenaar is van de listing
+    if listing.provider_id != user_id:
+        flash("Je hebt geen toestemming om deze actie uit te voeren.", "danger")
+        return redirect(url_for('main.dashboard'))
+
+    # Controleer of de listing al "deactivated" is
+    if listing.status != "deactivated":
+        flash("Deze zoekertje is al beschikbaar of heeft een andere status.", "warning")
+        return redirect(url_for('main.dashboard'))
+
+    # Update de status naar "available"
+    listing.status = "available"
+    db.session.commit()
+    flash(f"Zoekertje '{listing.listing_title}' is nu weer beschikbaar.", "success")
+
+    return redirect(url_for('main.dashboard'))
 
 
 # View listing route
@@ -223,10 +280,28 @@ def view_listing(listing_id):
 def index():
     all_listings = Listing.query.filter_by(status='available').all()
     categories = Category.query.all()
+    notifications_unread_count = 0  # Default value if not logged in or no notifications
+
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
-        return render_template('index.html', username=user.username, all_listings=all_listings, categories=categories)
-    return render_template('index.html', username=None, all_listings=all_listings, categories=categories)
+        notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()
+        notifications_unread_count = len(notifications)
+
+        return render_template(
+            'index.html',
+            username=user.username,
+            all_listings=all_listings,
+            categories=categories,
+            notifications_unread_count=notifications_unread_count
+        )
+
+    return render_template(
+        'index.html',
+        username=None,
+        all_listings=all_listings,
+        categories=categories,
+        notifications_unread_count=notifications_unread_count
+    )
 
 
 # Search route
@@ -240,7 +315,7 @@ def search():
     end_date = request.args.get('end_date')
 
     # Start de query voor listings
-    query = Listing.query
+    query = Listing.query.filter_by(status='available')
 
     # Voeg filters toe aan de query op basis van de zoekparameters
     if vehicle_type:
@@ -264,19 +339,58 @@ def search():
 
 
 # Dashboard route
-@main.route('/dashboard')
+@main.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
 
-    user = User.query.get(session['user_id'])
-    active_listings = Listing.query.filter_by(provider_id=user.id, status='active').all()
-    transactions = Transaction.query.filter_by(renter_id=user.id).all()
-    reviews = UserReview.query.filter_by(reviewer_id=user.id).all()
-    notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()
+    user_id = session['user_id']
+    user = User.query.get(user_id)
 
-    return render_template('dashboard.html', user=user, listings=active_listings,
-                           transactions=transactions, reviews=reviews, notifications=notifications)
+    if not user:
+        flash("Gebruiker niet gevonden.", "danger")
+        return redirect(url_for('main.logout'))
+
+    # Wijzig username
+    if request.method == 'POST':
+        new_username = request.form.get('username')
+        if new_username:
+            if User.query.filter_by(username=new_username).first():
+                flash("Deze gebruikersnaam is al in gebruik.", "danger")
+            else:
+                user.username = new_username
+                db.session.commit()
+                flash("Gebruikersnaam succesvol bijgewerkt.", "success")
+        return redirect(url_for('main.dashboard'))
+
+    # Reviews
+    written_reviews = UserReview.query.filter_by(reviewer_id=user_id).all()
+    received_reviews = UserReview.query.filter_by(reviewed_id=user_id).all()
+
+    # Eigen zoekertjes
+    own_listings = Listing.query.filter_by(provider_id=user_id).all()
+
+    # Gehuurde zoekertjes
+    rented_transactions = Transaction.query.filter_by(renter_id=user_id).all()
+    rented_listings = [trans.listing for trans in rented_transactions]
+
+    # Transactiegeschiedenis
+    transactions = Transaction.query.filter((Transaction.renter_id == user_id) |
+                                            (Transaction.listing.has(provider_id=user_id))).all()
+
+    # Ongelezen notificaties
+    notifications = Notification.query.filter_by(receiver_id=user_id, viewed=False).all()
+
+    return render_template(
+        'dashboard.html',
+        user=user,
+        written_reviews=written_reviews,
+        received_reviews=received_reviews,
+        own_listings=own_listings,
+        rented_listings=rented_listings,
+        transactions=transactions,
+        notifications=notifications
+    )
 
 
 # 4. Transaction Routes
@@ -335,14 +449,23 @@ def add_review(user_id):
 # 6. Notification Routes
 
 # View notifications route
+def get_notifications_for_user(username):
+    # Dit zou je moeten aanpassen aan de logica van je app, bijvoorbeeld een database-query
+    return [
+        {"id": 1, "message": "Nieuwe auto toegevoegd!", "read": False},
+        {"id": 2, "message": "Je reservering is bevestigd.", "read": True},
+    ]
+
 @main.route('/notifications')
 def notifications():
     if 'user_id' not in session:
-        return redirect(url_for('main.login'))
+        return redirect(url_for('main.login'))  # Gebruiker moet ingelogd zijn
 
-    user = User.query.get(session['user_id'])
-    notifications = Notification.query.filter_by(receiver_id=user.id).all()
-    return render_template('notifications.html', notifications=notifications)
+    user_id = session['user_id']  # Verkrijg de gebruiker ID uit de session
+    notifications = Notification.query.filter_by(receiver_id=user_id).all()
+
+    unread_count = sum(1 for notification in notifications if not notification.viewed)
+    return render_template('notifications.html', notifications=notifications, unread_count=unread_count)
 
 
 # Mark notification as viewed route
