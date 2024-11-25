@@ -44,3 +44,7 @@ Routes:
 
 Extra:
 	- Revenue streams, nadenken hoe wij geld verdienen (bijv. een fee op elk zoekertje)
+
+Problemen:
+ 	- Niet meer ingelogd volgens header wanneer je de index verlaat
+	- Notifications komen toe op login.html en niet op de pagina waar je u bevindt
