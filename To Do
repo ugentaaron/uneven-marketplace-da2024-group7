@@ -1,15 +1,15 @@
 Templates:
-	Homepagina: (Matthieu)
+	Homepagina: \DONE
 		- header met logo, notificaties, log in/sign up, 'rent your ride'
 		- advanced search
 		- alle listings met wat filters (car, bike, boat, ...)**
 			**listings die op 'active' staan (rented en deactivated niet weergeven)
-	log in/sign up
+	log in/sign up \DONE
 	notificaties:
 		- alle notificaties weergeven, gerangschikt op tijdstip
 		- moeten dus ook waar nodig notificaties inbrengen (bijv wanneer je zoekertje verhuurd is)
-	'rent your ride' brengt je naar zoekertje plaatsen indien ingelogd
-	klik op een willekeurige listing:
+	'rent your ride' brengt je naar zoekertje plaatsen indien ingelogd \DONE *nog manier vinden om foto's te uploaden naar supabase
+	klik op een willekeurige listing: \DONE
 		- titel
 		- foto's
 		- beschrijving
