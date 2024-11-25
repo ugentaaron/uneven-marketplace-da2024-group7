@@ -1,0 +1,47 @@
+Templates:
+	Homepagina: (Matthieu)
+		- header met logo, notificaties, log in/sign up, 'rent your ride'
+		- advanced search
+		- alle listings met wat filters (car, bike, boat, ...)**
+			**listings die op 'active' staan (rented en deactivated niet weergeven)
+	log in/sign up
+	notificaties:
+		- alle notificaties weergeven, gerangschikt op tijdstip
+		- moeten dus ook waar nodig notificaties inbrengen (bijv wanneer je zoekertje verhuurd is)
+	'rent your ride' brengt je naar zoekertje plaatsen indien ingelogd
+	klik op een willekeurige listing:
+		- titel
+		- foto's
+		- beschrijving
+		- algemene informatie uit table 'Vehicle'
+		- informatie over verhuurder
+		- rent knop
+	klik op informatie over verhuurder:
+		- alle zoekertjes van deze verhuurder weergeven
+		- alle reviews over deze verhuurder weergeven
+		- knop om review te schrijven
+	klik op rent:
+		- datums kiezen
+		- confirm knop
+	klik op confirm:
+		- pagina waar bevestiging staat
+		- back to homepage of naar dashboard
+		- mogelijkheid om review te schrijven
+	dashboard:
+		- je eigen zoekertjes
+		- je gehuurde zoekertjes
+		- al je eigen reviews
+		- ook mogelijk informatie over profiel veranderen, etc.
+		- alle notificaties
+	review:
+		- rating + comment
+		- knop om terug te gaan, knop om te plaatsen
+	
+		
+
+Routes:
+	- Minstens één algoritme (zie opdracht: 'innovative ideas will be rewarded')
+	- Gemiddelde pakken van alle reviews van een user en dit opslaan in table 'User'
+
+Extra:
+	- Revenue streams, nadenken hoe wij geld verdienen (bijv. een fee op elk zoekertje)
