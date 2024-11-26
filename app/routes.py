@@ -507,3 +507,4 @@ def delete_notification(notification_id):
         flash("Notification not found or you don't have permission to delete it.", "danger")
 
     return redirect(url_for('main.notifications'))
+
