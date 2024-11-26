@@ -304,7 +304,6 @@ def index():
     )
 
 
-# Search route
 @main.route('/search', methods=['GET'])
 def search():
     # Verkrijg de zoekparameters van de request
@@ -313,6 +312,7 @@ def search():
     price_max = request.args.get('price_max')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
+    sort_order = request.args.get('sort_order')  # Nieuw: sorteerparameter
 
     # Start de query voor listings
     query = Listing.query.filter_by(status='available')
@@ -329,6 +329,12 @@ def search():
     if end_date:
         query = query.filter(Listing.available_end >= end_date)
 
+    # Sorteer de query op prijs
+    if sort_order == 'price_asc':
+        query = query.order_by(Listing.price_per_day.asc())
+    elif sort_order == 'price_desc':
+        query = query.order_by(Listing.price_per_day.desc())
+
     # Verkrijg de gefilterde listings
     listings = query.all()
 
@@ -336,6 +342,7 @@ def search():
     categories = Category.query.all()
 
     return render_template('index.html', all_listings=listings, categories=categories)
+
 
 
 # Dashboard route
