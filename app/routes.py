@@ -60,6 +60,8 @@ def profile():
     if request.method == 'POST':
         user.username = request.form['username']
         user.email = request.form['email']
+        user.phone_number = request.form['phone number']
+        user.address = request.form['address']
         db.session.commit()
         return redirect(url_for('main.profile'))
 
@@ -402,16 +404,38 @@ def dashboard():
         flash("Gebruiker niet gevonden.", "danger")
         return redirect(url_for('main.logout'))
 
-    # Wijzig username
+    # Wijzig profielgegevens
     if request.method == 'POST':
         new_username = request.form.get('username')
-        if new_username:
+        new_email = request.form.get('email')
+        new_phone_number = request.form.get('phone_number')
+        new_address = request.form.get('address')
+
+        # Controleer en update username
+        if new_username and new_username != user.username:
             if User.query.filter_by(username=new_username).first():
                 flash("Deze gebruikersnaam is al in gebruik.", "danger")
             else:
                 user.username = new_username
-                db.session.commit()
-                flash("Gebruikersnaam succesvol bijgewerkt.", "success")
+
+        # Controleer en update e-mail
+        if new_email and new_email != user.email:
+            if User.query.filter_by(email=new_email).first():
+                flash("Dit e-mailadres is al in gebruik.", "danger")
+            else:
+                user.email = new_email
+
+        # Update telefoonnummer
+        if new_phone_number and new_phone_number != user.phone_number:
+            user.phone_number = new_phone_number
+
+        # Update adres
+        if new_address and new_address != user.address:
+            user.address = new_address
+
+        # Opslaan in de database
+        db.session.commit()
+        flash("Profiel succesvol bijgewerkt!", "success")
         return redirect(url_for('main.dashboard'))
 
     # Reviews
