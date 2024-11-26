@@ -1,0 +1,20 @@
+# Byte-compiled / gecompileerde Python-bestanden
+__pycache__/
+*.py[cod]
+
+# Virtuele omgeving
+venv/
+env/
+
+# macOS metadata
+.DS_Store
+
+# Migratiebestanden
+migrations/
+
+# Logbestanden
+*.log
+
+# IDE-specifieke bestanden
+.vscode/
+.idea/
