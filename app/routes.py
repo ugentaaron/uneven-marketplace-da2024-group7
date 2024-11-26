@@ -112,6 +112,12 @@ def add_listing():
 
             # Commit All Changes
             db.session.commit()
+
+            # Categoriseer voertuigen
+            categorized_vehicles = categorize_vehicle_prices(db.session)
+            for vehicle in categorized_vehicles:
+                print(f"Vehicle {vehicle['vehicle_id']} categorized as {vehicle['category']}")
+
             flash("Listing added successfully!", "success")
             return redirect(url_for('main.index'))
 
@@ -119,6 +125,45 @@ def add_listing():
             db.session.rollback()
             flash(f"An error occurred: {str(e)}", "danger")
             return redirect(url_for('main.add_listing'))
+
+    # Functie voertuigen categoriseren (algoritme 1)
+def categorize_vehicle_prices(session):
+    vehicles = session.query(Vehicle, Listing.price_per_day, Listing.location, Vehicle.vehicle_type).join(Listing).all()
+
+    grouped_vehicles = {}
+    for vehicle, price_per_day, location, vehicle_type in vehicles:
+        key = (vehicle_type, location)
+        if key not in grouped_vehicles:
+            grouped_vehicles[key] = []
+        grouped_vehicles[key].append((vehicle, price_per_day))
+
+    categorized_vehicles = []
+    for group_key, group_vehicles in grouped_vehicles.items():
+        prices = [price for _, price in group_vehicles]
+
+        if len(prices) < 3:
+            continue
+
+        low_threshold = np.percentile(prices, 33)
+        high_threshold = np.percentile(prices, 66)
+
+        for vehicle, price in group_vehicles:
+            if price <= low_threshold:
+                category = "Laag"
+            elif price <= high_threshold:
+                category = "Gemiddeld"
+            else:
+                category = "Hoog"
+
+            categorized_vehicles.append({
+                "vehicle_id": vehicle.vehicle_id,
+                "price_per_day": price,
+                "category": category,
+                "vehicle_type": group_key[0],
+                "location": group_key[1]
+            })
+
+    return categorized_vehicles
 
     # Fetch Categories for Form
     categories = Category.query.all()
@@ -304,6 +349,7 @@ def index():
     )
 
 
+# Search route
 @main.route('/search', methods=['GET'])
 def search():
     # Verkrijg de zoekparameters van de request
@@ -312,7 +358,6 @@ def search():
     price_max = request.args.get('price_max')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    sort_order = request.args.get('sort_order')  # Nieuw: sorteerparameter
 
     # Start de query voor listings
     query = Listing.query.filter_by(status='available')
@@ -329,12 +374,6 @@ def search():
     if end_date:
         query = query.filter(Listing.available_end >= end_date)
 
-    # Sorteer de query op prijs
-    if sort_order == 'price_asc':
-        query = query.order_by(Listing.price_per_day.asc())
-    elif sort_order == 'price_desc':
-        query = query.order_by(Listing.price_per_day.desc())
-
     # Verkrijg de gefilterde listings
     listings = query.all()
 
@@ -342,7 +381,6 @@ def search():
     categories = Category.query.all()
 
     return render_template('index.html', all_listings=listings, categories=categories)
-
 
 
 # Dashboard route
