@@ -391,7 +391,6 @@ def search():
     return render_template('index.html', all_listings=listings, categories=categories)
 
 
-# Dashboard route
 @main.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if 'user_id' not in session:
@@ -433,10 +432,19 @@ def dashboard():
         if new_address and new_address != user.address:
             user.address = new_address
 
-        # Opslaan in de database
-        db.session.commit()
-        flash("Profiel succesvol bijgewerkt!", "success")
+        # Print de wijzigingen voor debuggen
+        print(f"Updated user: {user.username}, {user.email}, {user.phone_number}, {user.address}")
+        
+        try:
+            # Opslaan in de database
+            db.session.commit()
+            flash("Profiel succesvol bijgewerkt!", "success")
+        except Exception as e:
+            flash(f"Er is een fout opgetreden: {e}", "danger")
+            db.session.rollback()
+
         return redirect(url_for('main.dashboard'))
+
 
     # Reviews
     written_reviews = UserReview.query.filter_by(reviewer_id=user_id).all()
