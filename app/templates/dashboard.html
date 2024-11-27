@@ -174,7 +174,7 @@
                                                 <td>{{ transaction.id }}</td>
                                                 <td>{{ transaction.listing.listing_title }}</td>
                                                 <td>{{ transaction.status }}</td>
-                                                <td>€{{ "%.2f"|format(transaction.total_price) }}</td>
+                                                <td>€{{ "%.2f"|format(transaction.total_price if transaction.total_price is not none else 0.0) }}</td>
                                                 <td>{{ transaction.start_date }} to {{ transaction.end_date }}</td>
                                             </tr>
                                         {% endfor %}

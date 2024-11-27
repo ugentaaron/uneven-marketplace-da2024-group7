@@ -1,12 +1,21 @@
 from flask import Blueprint, session, request, redirect, url_for, render_template, flash
 from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle
 from datetime import datetime
+from app.utils import allowed_file
+import os
+from werkzeug.utils import secure_filename
+from flask import current_app  
+from flask import send_from_directory
 
 main = Blueprint('main', __name__)
 
 
 # 1. User Authentication Routes
 
+@main.route('/uploads/<filename>')
+def uploaded_file(filename):
+    upload_folder = os.path.join(current_app.root_path, 'uploads')
+    return send_from_directory(upload_folder, filename)
 # Register route
 @main.route('/register', methods=['GET', 'POST'])
 def register():
@@ -70,6 +79,7 @@ def profile():
 
 # 2. Listing Management Routes
 
+
 # Add listing route
 @main.route('/add-listing', methods=['GET', 'POST'])
 def add_listing():
@@ -78,7 +88,30 @@ def add_listing():
 
     if request.method == 'POST':
         try:
-            # Add Listing
+
+            file = request.files.get('listing_images')
+            picture_path = None
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+
+                # Upload-folder ophalen uit de config
+                upload_folder = current_app.config['UPLOAD_FOLDER']
+                os.makedirs(upload_folder, exist_ok=True)
+
+                # Bestandslocatie bepalen
+                file_path = os.path.join(upload_folder, filename)
+
+                # Bestand opslaan
+                file.save(file_path)
+
+                # Relatief pad opslaan voor de database
+                picture_path = os.path.join('uploads', filename)
+                print(f"File uploaded successfully: {picture_path}")
+            else:
+                print("No valid file uploaded or file type is not allowed.")
+
+
+            # Nieuwe listing toevoegen
             new_listing = Listing(
                 listing_title=request.form['listing_name'],
                 price_per_day=float(request.form['price']),
@@ -86,11 +119,13 @@ def add_listing():
                 available_start=request.form['available_start'],
                 available_end=request.form['available_end'],
                 description=request.form['description'],
-                status=request.form.get('status', 'active'),
+                status=request.form.get('status', 'available'),  
+                picture=picture_path,
                 provider_id=session['user_id'],
                 created_at=datetime.utcnow()
             )
             db.session.add(new_listing)
+            db.session.flush() 
 
             # Add Categories
             selected_categories = request.form.getlist('categories') or []
@@ -115,18 +150,26 @@ def add_listing():
             # Commit All Changes
             db.session.commit()
 
-            # Categoriseer voertuigen
-            categorized_vehicles = categorize_vehicle_prices(db.session)
-            for vehicle in categorized_vehicles:
-                print(f"Vehicle {vehicle['vehicle_id']} categorized as {vehicle['category']}")
+            # Categorize Vehicles (if necessary logic exists)
+            categorized_vehicles = categorize_vehicle_prices(db.session)  # Assuming this function exists
+            for vehicle_data in categorized_vehicles:
+                print(f"Vehicle {vehicle_data['vehicle_id']} categorized as {vehicle_data['category']}")
+
+            print("Listing, categories, and vehicle committed to the database.")
 
             flash("Listing added successfully!", "success")
             return redirect(url_for('main.index'))
 
         except Exception as e:
+            # Rollback in case of errors
             db.session.rollback()
-            flash(f"An error occurred: {str(e)}", "danger")
+            print(f"Error during listing creation: {str(e)}")
+            flash(f"An error occurred while adding the listing: {str(e)}", "danger")
             return redirect(url_for('main.add_listing'))
+
+    # Render the add listing page with necessary data
+    categories = Category.query.all()  # Fetch categories for dropdown  
+    return render_template('add_listing.html', categories=categories, categorized_vehicles=[])
 
     # Functie voertuigen categoriseren (algoritme 1)
 def categorize_vehicle_prices(session):
@@ -463,6 +506,7 @@ def dashboard():
 
     # Ongelezen notificaties
     notifications = Notification.query.filter_by(receiver_id=user_id, viewed=False).all()
+    notifications_unread_count = Notification.query.filter_by(receiver_id=user_id, viewed=False).count()
 
     return render_template(
         'dashboard.html',
@@ -472,7 +516,8 @@ def dashboard():
         own_listings=own_listings,
         rented_listings=rented_listings,
         transactions=transactions,
-        notifications=notifications
+        notifications=notifications,
+        notifications_unread_count=notifications_unread_count  
     )
 
 
