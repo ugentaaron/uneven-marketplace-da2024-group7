@@ -31,6 +31,8 @@ class User(db.Model):
     id = db.Column('userID', db.BigInteger, primary_key=True)
     username = db.Column('userName', db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=True)
+    address = db.Column(db.String(120), unique=False, nullable=True)
+    phone_number = db.Column('phonenr', db.BigInteger, default=0)
     review_score = db.Column('reviewScore', db.BigInteger, default=0)
     created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow)
 

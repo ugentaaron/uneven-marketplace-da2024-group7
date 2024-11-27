@@ -373,6 +373,10 @@ def index():
     all_listings = Listing.query.filter_by(status='available').all()
     categories = Category.query.all()
     notifications_unread_count = 0  # Default value if not logged in or no notifications
+    total_users = User.query.count()  
+    total_listings = Listing.query.count()  
+    rented_listings = Listing.query.filter_by(status='rented').count()  
+    total_transactions = Transaction.query.count() 
 
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
@@ -384,15 +388,28 @@ def index():
             username=user.username,
             all_listings=all_listings,
             categories=categories,
-            notifications_unread_count=notifications_unread_count
+            notifications_unread_count=notifications_unread_count,
+            total_users=total_users,
+            total_listings=total_listings,
+            rented_listings=rented_listings,
+            total_transactions=total_transactions
+
         )
+    
+ 
+
 
     return render_template(
         'index.html',
         username=None,
         all_listings=all_listings,
         categories=categories,
-        notifications_unread_count=notifications_unread_count
+        notifications_unread_count=notifications_unread_count,
+        total_users=total_users,
+        total_listings=total_listings,
+        rented_listings=rented_listings,
+        total_transactions=total_transactions
+
     )
 
 

@@ -17,7 +17,7 @@
         <p><strong>Transaction ID:</strong> {{ transaction.id }}</p>
         <p><strong>Status:</strong> {{ transaction.status }}</p>
         <p><strong>Listing Title:</strong> {{ transaction.listing.listing_title }}</p>
-        <p><strong>Price:</strong> ${{ "%.2f"|format(transaction.listing.price) }}</p>
+        <p><strong>Price:</strong> €{{ "%.2f"|format(transaction.listing.price_per_day) }}</p>
         <p><strong>Start Date:</strong> {{ transaction.start_date }}</p>
         <p><strong>End Date:</strong> {{ transaction.end_date }}</p>
         <p><strong>Created At:</strong> {{ transaction.created_at }}</p>

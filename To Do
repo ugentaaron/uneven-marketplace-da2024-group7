@@ -1,6 +1,6 @@
 Templates:
 	Homepagina: \DONE
-		- header met logo, notificaties, log in/sign up, 'rent your ride'
+		- header met logo, notificaties, log in/sign up, 'rent your ride' 
 		- advanced search
 		- alle listings
 	log in/sign up \DONE
