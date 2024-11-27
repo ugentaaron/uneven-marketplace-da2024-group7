@@ -10,7 +10,6 @@ from flask import send_from_directory
 main = Blueprint('main', __name__)
 
 
-# 1. User Authentication Routes
 
 @main.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -32,6 +31,7 @@ def register():
     return render_template('register.html')
 
 
+
 # Login route
 @main.route('/login', methods=['GET', 'POST'])
 def login():
@@ -40,6 +40,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user:
             session['user_id'] = user.id
+            flash(f"Je bent ingelogd! Welkom, {user.username}.", "success")
             # Als er een 'next' parameter in de URL zit, ga dan naar die URL
             next_page = request.args.get('next')
             if next_page:
@@ -55,6 +56,7 @@ def login():
 @main.route('/logout', methods=['POST'])
 def logout():
     session.pop('user_id', None)
+    flash("Je bent uitgelogd!", "success")
     return redirect(url_for('main.index'))
 
 

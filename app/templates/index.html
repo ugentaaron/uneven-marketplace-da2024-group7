@@ -8,7 +8,10 @@
 </head>
 <body>
     {% include 'header.html' %}
+    {% include 'notifications_flask.html' %}
 
+
+    
     <header class="bg-success text-white py-5">
         <div class="container text-center">
             <h1 class="display-4 fw-bold">Find Your Perfect Ride</h1>
@@ -63,7 +66,9 @@
                 </div>
             </div>
         </section>
-
+        {% for message in get_flashed_messages() %}
+        <p>{{ message }}</p>
+    {% endfor %}
         <!-- Listings Section -->
         <section>
             <h2 class="text-center mb-4">Available Listings</h2>
@@ -90,7 +95,6 @@
     <footer class="bg-dark text-white text-center py-4 mt-5">
         <p class="mb-0">&copy; 2024 RentYourRide. All rights reserved.</p>
     </footer>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
 </html>

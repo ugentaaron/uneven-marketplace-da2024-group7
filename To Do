@@ -46,5 +46,5 @@ Extra:
 	- Revenue streams, nadenken hoe wij geld verdienen (bijv. een fee op elk zoekertje)
 
 Problemen:
- 	- Niet meer ingelogd volgens header wanneer je de index verlaat
-	- Notifications komen toe op login.html en niet op de pagina waar je u bevindt
+ 	- Niet meer ingelogd volgens header wanneer je de index verlaat - Gefixt
+	- Notifications komen toe op login.html en niet op de pagina waar je u bevindt  - Ook gefixt, komen nu op elke pagina toe in midden vanboven

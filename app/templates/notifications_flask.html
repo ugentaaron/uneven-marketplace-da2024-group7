@@ -1,0 +1,55 @@
+<!-- notifications_flask.html -->
+<div class="flash-message-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="alert-container">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show flash-message" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+</div>
+
+<style>
+    /* Flash message styling */
+    .flash-message-container {
+        position: fixed;
+        top: 70px; /* Adjust for your navbar height */
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1050; /* Ensure it stays above other content */
+        width: auto;
+        max-width: 50%;
+    }
+
+    .flash-message {
+        margin-bottom: 0.5rem;
+        animation: fadeIn 0.5s, fadeOut 0.5s 4s; /* 4s before fading out */
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+    }
+</style>
