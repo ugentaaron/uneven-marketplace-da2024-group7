@@ -7,7 +7,7 @@ Templates:
 	notificaties:
 		- alle notificaties weergeven, gerangschikt op tijdstip \DONE
 		- moeten dus ook waar nodig notificaties inbrengen (bijv wanneer je zoekertje verhuurd is)
-	'rent your ride' brengt je naar zoekertje plaatsen indien ingelogd \DONE *nog manier vinden om foto's te uploaden naar supabase
+	'rent your ride' brengt je naar zoekertje plaatsen indien ingelogd \DONE *nog manier vinden om foto's te uploaden naar supabase - Done
 	klik op een willekeurige listing: \DONE
 		- titel
 		- foto's
