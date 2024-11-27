@@ -76,7 +76,7 @@
                 {% for listing in all_listings %}
                     <div class="col-md-4">
                         <div class="card shadow-sm h-100">
-                            <img src="{{ listing.picture or '/static/default.jpg' }}"
+                            <img src="{{ listing.picture or '/static/default.jpg' if listing.picture else '../uploads/default.jpg'}}"
                                  alt="Image of {{ listing.listing_title }}"
                                  class="card-img-top" style="height: 200px; object-fit: cover;">
                             <div class="card-body d-flex flex-column text-center">
