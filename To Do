@@ -19,13 +19,8 @@ Templates:
 		- alle zoekertjes van deze verhuurder weergeven
 		- alle reviews over deze verhuurder weergeven
 		- knop om review te schrijven
-	klik op rent:
+	klik op rent: \DONE
 		- datums kiezen
-		- confirm knop
-	klik op confirm:
-		- pagina waar bevestiging staat
-		- back to homepage of naar dashboard
-		- mogelijkheid om review te schrijven
 	dashboard: \DONE
 		- je eigen zoekertjes
 		- je gehuurde zoekertjes
@@ -48,3 +43,13 @@ Extra:
 Problemen:
  	- Niet meer ingelogd volgens header wanneer je de index verlaat - Gefixt
 	- Notifications komen toe op login.html en niet op de pagina waar je u bevindt  - Ook gefixt, komen nu op elke pagina toe in midden vanboven
+
+	- Nieuwe gebruikers krijgen review score 0 ipv NULL
+	- Transaction heeft een totaal bedrag van 0.0 bij huren, moet nog aantal dagen * prijs per dag berekenen
+	- Geen manier om transaction te betalen, blijft dus op pending staan
+	- 'Categorized Vehicles by Price' werkt nog niet, of heb toch geen idee wat het zou moeten doen
+	- Wanneer je op index searched verdwijnen de platform statistics onderaan
+	- Knop 'browse listings' doet niets
+	- Wanneer je op 'rent now' klikt verdwijnt dit zoekertje niet uit de lijst available listings
+	- Notifications worden niet opgeslagen in database en komen dus ook niet bij notifications.html te staan
+	- Nieuwe aangemaakte listings worden niet toegevoegd in database onder tabel CategoryListing
