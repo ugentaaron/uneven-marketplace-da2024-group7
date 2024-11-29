@@ -55,7 +55,7 @@
                             <ul class="list-group">
                                 {% for notification in notifications %}
                                     <li class="list-group-item">
-                                        {{ notification.message }}
+                                        <p class="mb-1">{{ notification.message|safe }}</p>
                                     </li>
                                 {% endfor %}
                             </ul>

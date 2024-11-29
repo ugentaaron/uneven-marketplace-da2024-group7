@@ -362,7 +362,6 @@ def view_listing(listing_id):
 
     is_owner = 'user_id' in session and session['user_id'] == listing.provider_id
 
-    # Generate unavailable dates
     unavailable_dates = []
     for booking in bookings:
         current_date = booking.start_date
@@ -370,7 +369,6 @@ def view_listing(listing_id):
             unavailable_dates.append(current_date.isoformat())
             current_date += timedelta(days=1)
 
-    # Listing start and end dates
     listing_start = listing.available_start.isoformat()
     listing_end = listing.available_end.isoformat()
 
@@ -385,10 +383,10 @@ def view_listing(listing_id):
             flash("Please log in to make a purchase.", "danger")
             return redirect(url_for('main.login'))
 
-        # Log form data for debugging
+        action = request.form.get('action', '').strip()
+
         print("Form data received:", request.form)
 
-        # Parse the date range from the form
         date_range = request.form.get('date_range', '').strip()
         if not date_range:
             flash("No date range selected. Please select a valid date range.", "danger")
@@ -403,22 +401,18 @@ def view_listing(listing_id):
             flash("Invalid date range selected. Please use the format YYYY-MM-DD to YYYY-MM-DD.", "danger")
             return redirect(url_for('main.view_listing', listing_id=listing.id))
 
-        # Validate the rental period
         rental_days = (end_date - start_date).days
         if rental_days < 1:
             flash("The rental period must be at least one day.", "danger")
             return redirect(url_for('main.view_listing', listing_id=listing.id))
 
-        # Check if the selected dates are unavailable
         for date in (start_date + timedelta(days=i) for i in range(rental_days)):
             if date.isoformat() in unavailable_dates:
                 flash("The selected dates include unavailable bookings.", "danger")
                 return redirect(url_for('main.view_listing', listing_id=listing.id))
 
-        # Calculate total price
         total_price = rental_days * listing.price_per_day
 
-        # Create a new transaction
         new_transaction = Transaction(
             listing_id=listing.id,
             renter_id=session['user_id'],
@@ -430,11 +424,13 @@ def view_listing(listing_id):
         )
         db.session.add(new_transaction)
         db.session.commit()
+
         add_notification(
             receiver_id=listing.provider_id,
-            message=f"Nieuwe huurverzoek ontvangen van {session['username']} voor '{listing.listing_title}' "
+            message=f"Nieuw huurverzoek ontvangen van {session['username']} voor '{listing.listing_title}' "
                     f"van {start_date} tot {end_date}. Totaalbedrag: €{total_price:.2f}."
         )
+
         add_notification(
             receiver_id=session['user_id'],
             message=f"Je huurverzoek voor '{listing.listing_title}' is ingediend. "
@@ -443,6 +439,7 @@ def view_listing(listing_id):
 
         flash("Transaction created successfully!", "success")
         return redirect(url_for('main.transaction_details', transaction_id=new_transaction.id))
+
 
     return render_template(
         'view_listing.html',
@@ -455,36 +452,6 @@ def view_listing(listing_id):
         average_review_score=average_review_score,
         unavailable_dates=unavailable_dates
     )
-
-@main.route('/transaction/<int:transaction_id>/process', methods=['POST'])
-def process_payment(transaction_id):
-    if 'user_id' not in session:
-        flash("Please log in to process the payment.", "danger")
-        return redirect(url_for('main.login'))
-
-    transaction = Transaction.query.get_or_404(transaction_id)
-
-    if transaction.renter_id != session['user_id']:
-        flash("You are not authorized to process this payment.", "danger")
-        return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
-
-    # Update the status to "processed"
-    transaction.status = "processed"
-    db.session.commit()
-
-    add_notification(
-        receiver_id=transaction.renter_id,
-        message=f"Je transactie voor '{transaction.listing.listing_title}' is verwerkt!"
-    )
-
-    # Voeg notificatie toe voor de provider
-    add_notification(
-        receiver_id=transaction.listing.provider_id,
-        message=f"De transactie voor jouw listing '{transaction.listing.listing_title}' is verwerkt door de huurder."
-    )
-
-    flash("Payment processed successfully! The transaction is now marked as processed.", "success")
-    return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
 
 
 # 3. Search & Dashboard Routes
@@ -765,6 +732,8 @@ def transaction_details(transaction_id):
     is_renter = transaction.renter_id == current_user_id
     is_provider = listing.provider_id == current_user_id
 
+    transaction = Transaction.query.get_or_404(transaction_id)
+
     if request.method == 'POST':
         action = request.form.get('action')
 
@@ -774,7 +743,10 @@ def transaction_details(transaction_id):
             transaction.status = "processed"
             db.session.commit()
 
-            # Create a new booking
+            if transaction.renter_id != session['user_id']:
+                flash("You are not authorized to process this payment.", "danger")
+                return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
+
             new_booking = Booking(
                 listing_id=transaction.listing_id,
                 renter_id=transaction.renter_id,
@@ -786,8 +758,24 @@ def transaction_details(transaction_id):
             )
             db.session.add(new_booking)
             db.session.commit()
-            flash("Transaction processed and booking created successfully!", "success")
-            return redirect(url_for('main.transaction_details', transaction_id=transaction.id))
+
+            add_notification(
+                receiver_id=transaction.renter_id,
+                message=f"Je betaling voor '{transaction.listing.listing_title}' van {transaction.start_date} tot {transaction.end_date} "
+                        f"is succesvol verwerkt. Het totaalbedrag is €{transaction.total_price:.2f}. Bekijk je boeking "
+                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>hier</a>."
+            )
+
+            add_notification(
+                receiver_id=transaction.listing.provider_id,
+                message=f"De betaling voor het huurverzoek van '{transaction.listing.listing_title}' van {transaction.start_date} "
+                        f"tot {transaction.end_date} is voltooid. Het totaalbedrag is €{transaction.total_price:.2f}. Controleer de boeking "
+                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>hier</a>."
+            )
+
+            flash("Payment processed successfully! The transaction is now marked as processed.", "success")
+            return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
+
 
     return render_template(
         'transaction_details.html',
