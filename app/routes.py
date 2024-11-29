@@ -1,6 +1,6 @@
 from flask import Blueprint, session, request, redirect, url_for, render_template, flash
-from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle
-from datetime import datetime
+from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle, Booking
+from datetime import datetime, timedelta
 from app.utils import allowed_file
 import os
 from werkzeug.utils import secure_filename
@@ -325,36 +325,77 @@ def activate_listing(listing_id):
 
     return redirect(url_for('main.dashboard'))
 
-
-# View listing route
 @main.route('/listing/<int:listing_id>', methods=['GET', 'POST'])
 def view_listing(listing_id):
-    listing = Listing.query.get_or_404(listing_id)  # Haal de listing op
-    vehicle = Vehicle.query.filter_by(listing_id=listing.id).first()  # Haal de bijbehorende vehicle info op
-    provider = User.query.get(listing.provider_id)  # Haal de verhuurder op
+    listing = Listing.query.get_or_404(listing_id)
+    vehicle = Vehicle.query.filter_by(listing_id=listing.id).first()
+    provider = User.query.get(listing.provider_id)
+    bookings = Booking.query.filter_by(listing_id=listing.id).all()
+
+    # Generate unavailable dates
+    unavailable_dates = []
+    for booking in bookings:
+        current_date = booking.start_date
+        while current_date <= booking.end_date:
+            unavailable_dates.append(current_date.isoformat())
+            current_date += timedelta(days=1)
+
+    # Listing start and end dates
+    listing_start = listing.available_start.isoformat()
+    listing_end = listing.available_end.isoformat()
+
+    average_review_score = None
+    if provider:
+        reviews = UserReview.query.filter_by(reviewed_id=provider.id).all()
+        if reviews:
+            average_review_score = sum(review.rating for review in reviews) / len(reviews)
 
     if request.method == 'POST':
         if 'user_id' not in session:
             flash("Please log in to make a purchase.", "danger")
             return redirect(url_for('main.login'))
 
-        start_date = datetime.strptime(request.form.get('start_date'), "%Y-%m-%d").date() or listing.available_start
-        end_date = datetime.strptime(request.form.get('end_date'), "%Y-%m-%d").date() or listing.available_end
-        rental_days = (end_date - start_date).days
+        # Log form data for debugging
+        print("Form data received:", request.form)
 
+        # Parse the date range from the form
+        date_range = request.form.get('date_range', '').strip()
+        if not date_range:
+            flash("No date range selected. Please select a valid date range.", "danger")
+            return redirect(url_for('main.view_listing', listing_id=listing.id))
+
+        try:
+            start_date_str, end_date_str = date_range.split(" to ")
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        except ValueError as e:
+            print(f"Date parsing error: {e}")
+            flash("Invalid date range selected. Please use the format YYYY-MM-DD to YYYY-MM-DD.", "danger")
+            return redirect(url_for('main.view_listing', listing_id=listing.id))
+
+        # Validate the rental period
+        rental_days = (end_date - start_date).days
         if rental_days < 1:
             flash("The rental period must be at least one day.", "danger")
             return redirect(url_for('main.view_listing', listing_id=listing.id))
 
+        # Check if the selected dates are unavailable
+        for date in (start_date + timedelta(days=i) for i in range(rental_days)):
+            if date.isoformat() in unavailable_dates:
+                flash("The selected dates include unavailable bookings.", "danger")
+                return redirect(url_for('main.view_listing', listing_id=listing.id))
+
+        # Calculate total price
         total_price = rental_days * listing.price_per_day
 
+        # Create a new transaction
         new_transaction = Transaction(
             listing_id=listing.id,
             renter_id=session['user_id'],
             status="pending",
             start_date=start_date,
             end_date=end_date,
-            total_price=total_price,  
+            total_price=total_price,
             created_at=datetime.utcnow()
         )
         db.session.add(new_transaction)
@@ -363,14 +404,16 @@ def view_listing(listing_id):
         flash("Transaction created successfully!", "success")
         return redirect(url_for('main.transaction_details', transaction_id=new_transaction.id))
 
-    # Haal de gemiddelde score direct uit de provider (User)
-    average_review_score = provider.review_score if provider else None
-
-    return render_template('view_listing.html',
-                           listing=listing,
-                           vehicle=vehicle,
-                           provider=provider,
-                           average_review_score=average_review_score)
+    return render_template(
+        'view_listing.html',
+        listing=listing,
+        vehicle=vehicle,
+        provider=provider,
+        listing_start=listing_start,
+        listing_end=listing_end,
+        average_review_score=average_review_score,
+        unavailable_dates=unavailable_dates
+    )
 
 @main.route('/transaction/<int:transaction_id>/process', methods=['POST'])
 def process_payment(transaction_id):
@@ -569,43 +612,85 @@ def dashboard():
 
 # 4. Transaction Routes
 
+def is_vehicle_available(listing_id, start_date, end_date):
+    overlapping_bookings = Booking.query.filter(
+        Booking.listing_id == listing_id,
+        Booking.status == 'confirmed',
+        db.or_(
+            db.and_(Booking.start_date <= start_date, Booking.end_date >= start_date),
+            db.and_(Booking.start_date <= end_date, Booking.end_date >= end_date),
+            db.and_(Booking.start_date >= start_date, Booking.end_date <= end_date)
+        )
+    ).all()
+
+    return len(overlapping_bookings) == 0
+
 # Transaction details route
 @main.route('/transaction/<int:transaction_id>', methods=['GET', 'POST'])
 def transaction_details(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
-    listing = transaction.listing  # Access the associated listing
-    provider = User.query.get(listing.provider_id)  # Fetch the provider of the listing
+    listing = transaction.listing
+    provider = User.query.get(listing.provider_id)
     current_user_id = session.get('user_id')
 
     is_renter = transaction.renter_id == current_user_id
     is_provider = listing.provider_id == current_user_id
 
+    # Check if a review can be made
     existing_review = UserReview.query.filter_by(
         reviewer_id=current_user_id,
         listing_id=listing.id
     ).first() if is_renter else None
 
-
     # Check if the end date has passed
-    can_review = is_renter and datetime.utcnow().date() > transaction.end_date and not existing_review
+    can_review = (
+        is_renter
+        and transaction.status == "processed"
+        and datetime.utcnow().date() > transaction.end_date
+        and not existing_review
+    )
+    if request.method == 'POST':
+        action = request.form.get('action')
 
-    if request.method == 'POST' and can_review:
-        rating = int(request.form.get('rating'))
-        comment = request.form.get('comment', '').strip()
+        # Handle review submission
+        if action == "submit_review" and can_review:
+            rating = int(request.form.get('rating'))
+            comment = request.form.get('comment', '').strip()
 
-        # Create and save the new review
-        new_review = UserReview(
-            reviewer_id=current_user_id,
-            reviewed_id=listing.provider_id,
-            listing_id=listing.id,
-            rating=rating,
-            comment=comment,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(new_review)
-        db.session.commit()
-        flash("Review submitted successfully!", "success")
-        return redirect(url_for('main.transaction_details', transaction_id=transaction.id))
+            # Create and save the new review
+            new_review = UserReview(
+                reviewer_id=current_user_id,
+                reviewed_id=listing.provider_id,
+                listing_id=listing.id,
+                rating=rating,
+                comment=comment,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(new_review)
+            db.session.commit()
+            flash("Review submitted successfully!", "success")
+            return redirect(url_for('main.transaction_details', transaction_id=transaction.id))
+
+        # Handle transaction status change to "processed"
+        if action == "process_transaction" and is_renter and transaction.status == "pending":
+            # Update transaction status
+            transaction.status = "processed"
+            db.session.commit()
+
+            # Create a new booking
+            new_booking = Booking(
+                listing_id=transaction.listing_id,
+                renter_id=transaction.renter_id,
+                transaction_id=transaction.id,
+                start_date=transaction.start_date,
+                end_date=transaction.end_date,
+                status="confirmed",
+                created_at=datetime.utcnow()
+            )
+            db.session.add(new_booking)
+            db.session.commit()
+            flash("Transaction processed and booking created successfully!", "success")
+            return redirect(url_for('main.transaction_details', transaction_id=transaction.id))
 
     received_reviews = UserReview.query.filter_by(
         reviewed_id=current_user_id,

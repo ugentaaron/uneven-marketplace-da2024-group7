@@ -144,3 +144,25 @@ class UserReview(db.Model):
 
     def __repr__(self):
         return f"<Review {self.review_id}, Rating: {self.rating}>"
+
+
+
+class Booking(db.Model):
+    __tablename__ = 'Bookings'
+
+    booking_id = db.Column('bookingID', db.BigInteger, primary_key=True)
+    listing_id = db.Column('listingID', db.BigInteger, db.ForeignKey('Listing.listingID'), nullable=False)
+    renter_id = db.Column('renterID', db.BigInteger, db.ForeignKey('User.userID'), nullable=False)
+    transaction_id = db.Column('transactionID', db.BigInteger, db.ForeignKey('Transaction.transactionID'), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(50), default='confirmed', nullable=False)
+    created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    listing = db.relationship('Listing', backref='bookings', lazy=True)
+    renter = db.relationship('User', backref='bookings', lazy=True)
+    transaction = db.relationship('Transaction', backref='bookings', lazy=True)
+
+    def __repr__(self):
+        return f"<Booking {self.booking_id} | Listing {self.listing_id} | Renter {self.renter_id} | Status {self.status}>"

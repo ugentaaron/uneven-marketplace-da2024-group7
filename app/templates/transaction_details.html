@@ -22,31 +22,38 @@
         <p><strong>End Date:</strong> {{ transaction.end_date }}</p>
         <p><strong>Total Price:</strong> €{{ "%.2f"|format(transaction.total_price) }}</p>
         <p><strong>Created At:</strong> {{ transaction.created_at }}</p>
-    
-        <!-- Renter's View -->
-        {% if is_renter %}
-            <h3>Your Review</h3>
-            {% if existing_review %}
-                <p><strong>Rating:</strong> {{ existing_review.rating }} / 5</p>
-                <p><strong>Comment:</strong> {{ existing_review.comment }}</p>
-                <p class="text-muted"><i>Review left on {{ existing_review.created_at }}</i></p>
-            {% elif can_review %}
-                <form method="POST" action="{{ url_for('main.transaction_details', transaction_id=transaction.id) }}">
-                    <div class="mb-3">
-                        <label for="rating" class="form-label">Rating (1-5)</label>
-                        <input type="number" name="rating" id="rating" class="form-control" min="1" max="5" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="comment" class="form-label">Comment</label>
-                        <textarea name="comment" id="comment" class="form-control" rows="4"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Submit Review</button>
-                </form>
-            {% else %}
-                <p class="text-muted">You cannot leave a review at this time.</p>
-            {% endif %}
+        
+        <!-- Process Transaction Button (Visible only for the renter) -->
+        {% if is_renter and transaction.status == "pending" %}
+        <form method="POST">
+            <input type="hidden" name="action" value="process_transaction">
+            <button type="submit" class="btn btn-success">Process Transaction</button>
+        </form>
         {% endif %}
-    
+    <!-- Renter's View -->
+    {% if is_renter %}
+        <h3>Your Review</h3>
+        {% if existing_review %}
+            <p><strong>Rating:</strong> {{ existing_review.rating }} / 5</p>
+            <p><strong>Comment:</strong> {{ existing_review.comment }}</p>
+            <p class="text-muted"><i>Review left on {{ existing_review.created_at }}</i></p>
+        {% elif can_review %}
+            <form method="POST" action="{{ url_for('main.transaction_details', transaction_id=transaction.id) }}">
+                <input type="hidden" name="action" value="submit_review">
+                <div class="mb-3">
+                    <label for="rating" class="form-label">Rating (1-5)</label>
+                    <input type="number" name="rating" id="rating" class="form-control" min="1" max="5" required>
+                </div>
+                <div class="mb-3">
+                    <label for="comment" class="form-label">Comment</label>
+                    <textarea name="comment" id="comment" class="form-control" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Review</button>
+            </form>
+        {% else %}
+            <p class="text-muted">You can only review after the end date of the listing.</p>
+        {% endif %}
+    {% endif %}    
         <!-- Provider's View -->
         {% if is_provider %}
             <h3>Feedback Received</h3>
