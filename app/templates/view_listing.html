@@ -60,6 +60,9 @@
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">Rent this Vehicle</h5>
+                        {% if is_owner %}
+                        <p class="text-muted">You cannot rent your own listing.</p>
+                        {% else %}
                         <form method="POST" action="{{ url_for('main.view_listing', listing_id=listing.id) }}">
                             <label for="date_range">Select Date Range:</label>
                             <input
@@ -73,7 +76,7 @@
                             <p><strong>Price per day:</strong> €{{ "%.2f"|format(listing.price_per_day) }}</p>
                             <button type="submit" class="btn btn-success mt-3">Rent Now</button>
                         </form>
-                        
+                        {% endif %}
                         <script>
                             document.addEventListener("DOMContentLoaded", function () {
                                 flatpickr("#date_range", {

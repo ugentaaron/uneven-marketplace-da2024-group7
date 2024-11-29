@@ -332,6 +332,8 @@ def view_listing(listing_id):
     provider = User.query.get(listing.provider_id)
     bookings = Booking.query.filter_by(listing_id=listing.id).all()
 
+    is_owner = 'user_id' in session and session['user_id'] == listing.provider_id
+
     # Generate unavailable dates
     unavailable_dates = []
     for booking in bookings:
@@ -408,6 +410,7 @@ def view_listing(listing_id):
         'view_listing.html',
         listing=listing,
         vehicle=vehicle,
+        is_owner=is_owner,
         provider=provider,
         listing_start=listing_start,
         listing_end=listing_end,
