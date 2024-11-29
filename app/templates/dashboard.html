@@ -152,17 +152,57 @@
                         {% endif %}
                     </div>
                 </div>
-
+                <!-- Bookings Section -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Bookings</h5>
+                        {% if bookings %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Listing</th>
+                                            <th>Renter</th>
+                                            <th>Status</th>
+                                            <th>Price</th>
+                                            <th>Dates</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for booking in bookings %}
+                                            <tr>
+                                                <td>{{ booking.booking_id }}</td>
+                                                <td>{{ booking.listing.listing_title }}</td>
+                                                <td>{{ booking.renter.username }}</td>
+                                                <td>{{ booking.status }}</td>
+                                                <td>€{{ "%.2f"|format((booking.end_date - booking.start_date).days * booking.listing.price_per_day) }}</td>
+                                                <td>{{ booking.start_date }} to {{ booking.end_date }}</td>
+                                                <td class="d-flex gap-1">
+                                                    <a href="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}" 
+                                                    class="btn btn-sm btn-primary text-sm">View</a>                                                </td>                                               
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No booking history available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+        
                 <!-- Transactions Section -->
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">Transaction History</h5>
+                        <h5 class="card-title">Invoices</h5>
                         {% if transactions %}
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Transaction ID</th>
+                                            <th>ID</th>
                                             <th>Listing</th>
                                             <th>Status</th>
                                             <th>Total Price</th>
@@ -175,10 +215,20 @@
                                             <tr>
                                                 <td>{{ transaction.id }}</td>
                                                 <td>{{ transaction.listing.listing_title }}</td>
-                                                <td>{{ transaction.status }}</td>
+                                                <td>
+                                                    {% if transaction.status == "pending" %}
+                                                        <span class="text-warning fw-bold">Pending</span>
+                                                    {% elif transaction.status == "processed" %}
+                                                        <span class="text-success fw-bold">Processed</span>
+                                                    {% elif transaction.status == "cancelled" %}
+                                                        <span class="text-danger fw-bold">Cancelled</span>
+                                                    {% else %}
+                                                        {{ transaction.status }}
+                                                    {% endif %}
+                                                </td>
                                                 <td>€{{ "%.2f"|format(transaction.total_price if transaction.total_price is not none else 0.0) }}</td>
                                                 <td>{{ transaction.start_date }} to {{ transaction.end_date }}</td>
-                                                <td class="d-flex gap-1">
+                                                <td>
                                                     <a href="{{ url_for('main.transaction_details', transaction_id=transaction.id) }}" class="btn btn-sm btn-success">View</a>
                                                 </td>
                                             </tr>

@@ -661,6 +661,10 @@ def dashboard():
     notifications = Notification.query.filter_by(receiver_id=user_id, viewed=False).all()
     notifications_unread_count = Notification.query.filter_by(receiver_id=user_id, viewed=False).count()
 
+    bookings = Booking.query.filter(
+        (Booking.renter_id == user_id) | (Booking.listing.has(provider_id=user_id))
+    ).all()
+
     return render_template(
         'dashboard.html',
         user=user,
@@ -670,9 +674,70 @@ def dashboard():
         rented_listings=rented_listings,
         transactions=transactions,
         notifications=notifications,
-        notifications_unread_count=notifications_unread_count  
+        notifications_unread_count=notifications_unread_count,
+        bookings=bookings
     )
 
+@main.route('/booking/<int:booking_id>', methods=['GET', 'POST'])
+def booking_details(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    listing = booking.listing
+    provider = User.query.get(listing.provider_id)
+    current_user_id = session.get('user_id')
+
+    is_renter = booking.renter_id == current_user_id
+    is_provider = listing.provider_id == current_user_id
+
+    # Check if a review can be made
+    existing_review = UserReview.query.filter_by(
+        reviewer_id=current_user_id,
+        listing_id=listing.id
+    ).first() if is_renter else None
+
+    can_review = (
+        is_renter
+        and booking.status == "confirmed"
+        and datetime.utcnow().date() > booking.end_date
+        and not existing_review
+    )
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == "submit_review" and can_review:
+            rating = int(request.form.get('rating'))
+            comment = request.form.get('comment', '').strip()
+
+            # Create and save the new review
+            new_review = UserReview(
+                reviewer_id=current_user_id,
+                reviewed_id=listing.provider_id,
+                listing_id=listing.id,
+                rating=rating,
+                comment=comment,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(new_review)
+            db.session.commit()
+            flash("Review submitted successfully!", "success")
+            return redirect(url_for('main.booking_details', booking_id=booking_id))
+
+    average_review_score = None
+    if provider.received_feedback:
+        reviews = [review.rating for review in provider.received_feedback]
+        average_review_score = sum(reviews) / len(reviews)
+
+    return render_template(
+        'booking_details.html',
+        booking=booking,
+        listing=listing,
+        provider=provider,
+        is_renter=is_renter,
+        is_provider=is_provider,
+        can_review=can_review,
+        existing_review=existing_review,
+        average_review_score=average_review_score
+    )
 
 # 4. Transaction Routes
 
@@ -700,40 +765,8 @@ def transaction_details(transaction_id):
     is_renter = transaction.renter_id == current_user_id
     is_provider = listing.provider_id == current_user_id
 
-    # Check if a review can be made
-    existing_review = UserReview.query.filter_by(
-        reviewer_id=current_user_id,
-        listing_id=listing.id
-    ).first() if is_renter else None
-
-    # Check if the end date has passed
-    can_review = (
-        is_renter
-        and transaction.status == "processed"
-        and datetime.utcnow().date() > transaction.end_date
-        and not existing_review
-    )
     if request.method == 'POST':
         action = request.form.get('action')
-
-        # Handle review submission
-        if action == "submit_review" and can_review:
-            rating = int(request.form.get('rating'))
-            comment = request.form.get('comment', '').strip()
-
-            # Create and save the new review
-            new_review = UserReview(
-                reviewer_id=current_user_id,
-                reviewed_id=listing.provider_id,
-                listing_id=listing.id,
-                rating=rating,
-                comment=comment,
-                created_at=datetime.utcnow()
-            )
-            db.session.add(new_review)
-            db.session.commit()
-            flash("Review submitted successfully!", "success")
-            return redirect(url_for('main.transaction_details', transaction_id=transaction.id))
 
         # Handle transaction status change to "processed"
         if action == "process_transaction" and is_renter and transaction.status == "pending":
@@ -756,21 +789,13 @@ def transaction_details(transaction_id):
             flash("Transaction processed and booking created successfully!", "success")
             return redirect(url_for('main.transaction_details', transaction_id=transaction.id))
 
-    received_reviews = UserReview.query.filter_by(
-        reviewed_id=current_user_id,
-        listing_id=listing.id
-    ).all() if is_provider else []
-
     return render_template(
         'transaction_details.html',
         transaction=transaction,
         listing=listing,
         provider=provider,
         is_renter=is_renter,
-        is_provider=is_provider,
-        can_review=can_review,
-        existing_review=existing_review,
-        received_reviews=received_reviews
+        is_provider=is_provider
     )
 
 
