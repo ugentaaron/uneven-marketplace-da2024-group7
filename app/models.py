@@ -95,7 +95,7 @@ class Transaction(db.Model):
     __tablename__ = 'Transaction'
 
     id = db.Column('transactionID', db.BigInteger, primary_key=True)
-    status = db.Column('status', db.String, nullable=False)
+    status = db.Column(db.Enum('pending', 'approved', 'rejected', 'processed', name='transaction_status'), nullable=False, default='pending')
     renter_id = db.Column('renterID', db.BigInteger, db.ForeignKey('User.userID'), nullable=False)
     listing_id = db.Column('listingID', db.BigInteger, db.ForeignKey('Listing.listingID'), nullable=False)
     created_at = db.Column('createdAt', db.DateTime, nullable=False, default=datetime.utcnow)

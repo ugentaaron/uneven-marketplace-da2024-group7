@@ -338,8 +338,15 @@ def view_listing(listing_id):
             flash("Please log in to make a purchase.", "danger")
             return redirect(url_for('main.login'))
 
-        start_date = request.form.get('start_date') or listing.available_start
-        end_date = request.form.get('end_date') or listing.available_end
+        start_date = datetime.strptime(request.form.get('start_date'), "%Y-%m-%d").date() or listing.available_start
+        end_date = datetime.strptime(request.form.get('end_date'), "%Y-%m-%d").date() or listing.available_end
+        rental_days = (end_date - start_date).days
+
+        if rental_days < 1:
+            flash("The rental period must be at least one day.", "danger")
+            return redirect(url_for('main.view_listing', listing_id=listing.id))
+
+        total_price = rental_days * listing.price_per_day
 
         new_transaction = Transaction(
             listing_id=listing.id,
@@ -347,6 +354,7 @@ def view_listing(listing_id):
             status="pending",
             start_date=start_date,
             end_date=end_date,
+            total_price=total_price,  
             created_at=datetime.utcnow()
         )
         db.session.add(new_transaction)
@@ -363,6 +371,25 @@ def view_listing(listing_id):
                            vehicle=vehicle,
                            provider=provider,
                            average_review_score=average_review_score)
+
+@main.route('/transaction/<int:transaction_id>/process', methods=['POST'])
+def process_payment(transaction_id):
+    if 'user_id' not in session:
+        flash("Please log in to process the payment.", "danger")
+        return redirect(url_for('main.login'))
+
+    transaction = Transaction.query.get_or_404(transaction_id)
+
+    if transaction.renter_id != session['user_id']:
+        flash("You are not authorized to process this payment.", "danger")
+        return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
+
+    # Update the status to "processed"
+    transaction.status = "processed"
+    db.session.commit()
+
+    flash("Payment processed successfully! The transaction is now marked as processed.", "success")
+    return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
 
 
 # 3. Search & Dashboard Routes
@@ -543,16 +570,59 @@ def dashboard():
 # 4. Transaction Routes
 
 # Transaction details route
-@main.route('/transaction/<int:transaction_id>', methods=['GET'])
+@main.route('/transaction/<int:transaction_id>', methods=['GET', 'POST'])
 def transaction_details(transaction_id):
-    if 'user_id' not in session:
-        return redirect(url_for('main.login'))
+    transaction = Transaction.query.get_or_404(transaction_id)
+    listing = transaction.listing  # Access the associated listing
+    provider = User.query.get(listing.provider_id)  # Fetch the provider of the listing
+    current_user_id = session.get('user_id')
 
-    transaction = Transaction.query.get(transaction_id)
-    if transaction and transaction.renter_id == session['user_id']:
-        return render_template('transaction_details.html', transaction=transaction)
+    is_renter = transaction.renter_id == current_user_id
+    is_provider = listing.provider_id == current_user_id
 
-    return 'Transaction not found', 404
+    existing_review = UserReview.query.filter_by(
+        reviewer_id=current_user_id,
+        listing_id=listing.id
+    ).first() if is_renter else None
+
+
+    # Check if the end date has passed
+    can_review = is_renter and datetime.utcnow().date() > transaction.end_date and not existing_review
+
+    if request.method == 'POST' and can_review:
+        rating = int(request.form.get('rating'))
+        comment = request.form.get('comment', '').strip()
+
+        # Create and save the new review
+        new_review = UserReview(
+            reviewer_id=current_user_id,
+            reviewed_id=listing.provider_id,
+            listing_id=listing.id,
+            rating=rating,
+            comment=comment,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_review)
+        db.session.commit()
+        flash("Review submitted successfully!", "success")
+        return redirect(url_for('main.transaction_details', transaction_id=transaction.id))
+
+    received_reviews = UserReview.query.filter_by(
+        reviewed_id=current_user_id,
+        listing_id=listing.id
+    ).all() if is_provider else []
+
+    return render_template(
+        'transaction_details.html',
+        transaction=transaction,
+        listing=listing,
+        provider=provider,
+        is_renter=is_renter,
+        is_provider=is_provider,
+        can_review=can_review,
+        existing_review=existing_review,
+        received_reviews=received_reviews
+    )
 
 
 # 5. Review Routes

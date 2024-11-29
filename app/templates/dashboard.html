@@ -167,6 +167,7 @@
                                             <th>Status</th>
                                             <th>Total Price</th>
                                             <th>Dates</th>
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -177,6 +178,9 @@
                                                 <td>{{ transaction.status }}</td>
                                                 <td>€{{ "%.2f"|format(transaction.total_price if transaction.total_price is not none else 0.0) }}</td>
                                                 <td>{{ transaction.start_date }} to {{ transaction.end_date }}</td>
+                                                <td class="d-flex gap-1">
+                                                    <a href="{{ url_for('main.transaction_details', transaction_id=transaction.id) }}" class="btn btn-sm btn-success">View</a>
+                                                </td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
