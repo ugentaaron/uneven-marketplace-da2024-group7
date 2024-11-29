@@ -40,6 +40,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user:
             session['user_id'] = user.id
+            session['username'] = user.username
             flash(f"Je bent ingelogd! Welkom, {user.username}.", "success")
             # Als er een 'next' parameter in de URL zit, ga dan naar die URL
             next_page = request.args.get('next')
@@ -129,6 +130,11 @@ def add_listing():
             db.session.add(new_listing)
             db.session.flush() 
 
+            add_notification(
+                receiver_id=session['user_id'],
+                message=f"Je listing '{new_listing.listing_title}' is succesvol aangemaakt."
+            )
+            
             # Add Categories
             selected_categories = request.form.getlist('categories') or []
             for category_name in selected_categories:
@@ -290,40 +296,62 @@ def deactivate_listing(listing_id):
     # Update de status naar "deactivated"
     listing.status = "deactivated"
     db.session.commit()
+
+    # Voeg een notificatie toe voor de eigenaar
+    add_notification(
+        receiver_id=user_id,
+        message=f"Je zoekertje '{listing.listing_title}' is succesvol gedeactiveerd."
+    )
+
+    # Voeg een notificatie toe voor huurders met pending transacties - voor pending transacties
+    pending_transactions = Transaction.query.filter_by(
+        listing_id=listing_id,
+        status="pending"
+    ).all()
+
+    for transaction in pending_transactions:
+        add_notification(
+            receiver_id=transaction.renter_id,
+            message=f"Het zoekertje '{listing.listing_title}' dat je wilde huren is gedeactiveerd door de eigenaar. "
+                    "Controleer je transacties voor meer informatie."
+        )
+
     flash(f"Zoekertje '{listing.listing_title}' is gedeactiveerd.", "success")
-
     return redirect(url_for('main.dashboard'))
-
 
 # Activate listing route
 @main.route('/activate_listing/<int:listing_id>', methods=['POST'])
 def activate_listing(listing_id):
-    # Controleer of de gebruiker is ingelogd
     if 'user_id' not in session:
         flash("Je moet ingelogd zijn om deze actie uit te voeren.", "danger")
         return redirect(url_for('main.login'))
 
     user_id = session['user_id']
 
-    # Zoek de listing op basis van listing_id
     listing = Listing.query.get_or_404(listing_id)
 
-    # Controleer of de ingelogde gebruiker de eigenaar is van de listing
     if listing.provider_id != user_id:
         flash("Je hebt geen toestemming om deze actie uit te voeren.", "danger")
         return redirect(url_for('main.dashboard'))
 
     # Controleer of de listing al "deactivated" is
     if listing.status != "deactivated":
-        flash("Deze zoekertje is al beschikbaar of heeft een andere status.", "warning")
+        flash("Dit zoekertje is al beschikbaar of heeft een andere status.", "warning")
         return redirect(url_for('main.dashboard'))
 
     # Update de status naar "available"
     listing.status = "available"
     db.session.commit()
-    flash(f"Zoekertje '{listing.listing_title}' is nu weer beschikbaar.", "success")
 
+    # Voeg een notificatie toe voor de eigenaar
+    add_notification(
+        receiver_id=user_id,
+        message=f"Je zoekertje '{listing.listing_title}' is succesvol opnieuw geactiveerd en beschikbaar gemaakt."
+    )
+
+    flash(f"Zoekertje '{listing.listing_title}' is nu weer beschikbaar.", "success")
     return redirect(url_for('main.dashboard'))
+
 
 @main.route('/listing/<int:listing_id>', methods=['GET', 'POST'])
 def view_listing(listing_id):
@@ -402,6 +430,16 @@ def view_listing(listing_id):
         )
         db.session.add(new_transaction)
         db.session.commit()
+        add_notification(
+            receiver_id=listing.provider_id,
+            message=f"Nieuwe huurverzoek ontvangen van {session['username']} voor '{listing.listing_title}' "
+                    f"van {start_date} tot {end_date}. Totaalbedrag: €{total_price:.2f}."
+        )
+        add_notification(
+            receiver_id=session['user_id'],
+            message=f"Je huurverzoek voor '{listing.listing_title}' is ingediend. "
+                    f"Bekijk je transactie <a href='{url_for('main.transaction_details', transaction_id=new_transaction.id)}'>hier</a>."
+        )
 
         flash("Transaction created successfully!", "success")
         return redirect(url_for('main.transaction_details', transaction_id=new_transaction.id))
@@ -433,6 +471,17 @@ def process_payment(transaction_id):
     # Update the status to "processed"
     transaction.status = "processed"
     db.session.commit()
+
+    add_notification(
+        receiver_id=transaction.renter_id,
+        message=f"Je transactie voor '{transaction.listing.listing_title}' is verwerkt!"
+    )
+
+    # Voeg notificatie toe voor de provider
+    add_notification(
+        receiver_id=transaction.listing.provider_id,
+        message=f"De transactie voor jouw listing '{transaction.listing.listing_title}' is verwerkt door de huurder."
+    )
 
     flash("Payment processed successfully! The transaction is now marked as processed.", "success")
     return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
@@ -527,7 +576,7 @@ def search():
     total_listings = Listing.query.count()  
     rented_listings = Listing.query.filter_by(status='rented').count()  
     total_transactions = Transaction.query.count() 
-    
+
     return render_template('index.html', 
         all_listings=listings, 
         categories=categories,
@@ -744,13 +793,25 @@ def add_review(user_id):
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
 
+    current_user_id = session['user_id']  
+    reviewed_user = User.query.get_or_404(user_id)  
     if request.method == 'POST':
+        # Haal de benodigde gegevens uit het formulier
         rating = int(request.form['rating'])
-        comment = request.form.get('comment', '')
+        comment = request.form.get('comment', '').strip()
+        listing_id = request.form.get('listing_id')
 
+        # Controleer of de listing bestaat en geassocieerd is met de reviewed user
+        listing = Listing.query.get_or_404(listing_id)
+        if listing.provider_id != user_id:
+            flash("De opgegeven listing hoort niet bij de ontvanger van de review.", "danger")
+            return redirect(url_for('main.add_review', user_id=user_id))
+
+        # Maak en sla de review op
         new_review = UserReview(
+            reviewer_id=current_user_id,
             reviewed_id=user_id,
-            listing_id=request.form['listing_id'],
+            listing_id=listing_id,
             rating=rating,
             comment=comment,
             created_at=datetime.utcnow()
@@ -758,12 +819,40 @@ def add_review(user_id):
         db.session.add(new_review)
         db.session.commit()
 
+        # Voeg notificatie toe voor de ontvanger van de review
+        add_notification(
+            receiver_id=user_id,
+            message=f"Je hebt een nieuwe review ontvangen van {session.get('username', 'iemand')}: "
+                    f"{rating} sterren. Opmerking: '{comment}' voor de listing '{listing.listing_title}'."
+        )
+
+        # Voeg notificatie toe voor de reviewer
+        add_notification(
+            receiver_id=current_user_id,
+            message=f"Je hebt succesvol een review achtergelaten voor {reviewed_user.username}: "
+                    f"{rating} sterren. Opmerking: '{comment}' voor de listing '{listing.listing_title}'."
+        )
+
+        flash("Je hebt succesvol een review achtergelaten!", "success")
         return redirect(url_for('main.user_reviews', user_id=user_id))
 
-    return render_template('add_review.html', user_id=user_id)
-
+    return render_template('add_review.html', user_id=user_id, reviewed_user=reviewed_user)
 
 # 6. Notification Routes
+
+
+def add_notification(receiver_id, message):
+    """
+    Voegt een nieuwe notificatie toe aan de database.
+    """
+    new_notification = Notification(
+        receiver_id=receiver_id,
+        message=message,
+        created_at=datetime.utcnow(),
+        viewed=False
+    )
+    db.session.add(new_notification)
+    db.session.commit()
 
 # View notifications route
 def get_notifications_for_user(username):
