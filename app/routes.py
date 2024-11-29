@@ -523,7 +523,19 @@ def search():
     # Verkrijg de lijst van categorieën voor de dropdown
     categories = Category.query.all()
 
-    return render_template('index.html', all_listings=listings, categories=categories)
+    total_users = User.query.count()  
+    total_listings = Listing.query.count()  
+    rented_listings = Listing.query.filter_by(status='rented').count()  
+    total_transactions = Transaction.query.count() 
+    
+    return render_template('index.html', 
+        all_listings=listings, 
+        categories=categories,
+        total_users=total_users,
+        total_listings=total_listings,
+        rented_listings=rented_listings,
+        total_transactions=total_transactions
+)
 
 
 @main.route('/dashboard', methods=['GET', 'POST'])
