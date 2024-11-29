@@ -6,7 +6,7 @@ Templates:
 	log in/sign up \DONE
 	notificaties:
 		- alle notificaties weergeven, gerangschikt op tijdstip \DONE
-		- moeten dus ook waar nodig notificaties inbrengen (bijv wanneer je zoekertje verhuurd is)
+		- moeten dus ook waar nodig notificaties inbrengen (bijv wanneer je zoekertje verhuurd is) \Done
 	'rent your ride' brengt je naar zoekertje plaatsen indien ingelogd \DONE *nog manier vinden om foto's te uploaden naar supabase - Done
 	klik op een willekeurige listing: \DONE
 		- titel
@@ -52,5 +52,5 @@ Problemen:
 	- Wanneer je op index searched verdwijnen de platform statistics onderaan -> Done
 	- Knop 'browse listings' doet niets -> Wat wil je dat het doet ? Is eigenlijk gewoon een manier om naar de search tabel op de index te gaan
 	- Wanneer je op 'rent now' klikt verdwijnt dit zoekertje niet uit de lijst available listings - Done, gaat enkel de dates dat hij is verhuurd weghalen uit de kalender
-	- Notifications worden niet opgeslagen in database en komen dus ook niet bij notifications.html te staan
+	- Notifications worden niet opgeslagen in database en komen dus ook niet bij notifications.html te staan - Done, verschil tussen flash notifications en echte (flash is gwn inlog, en als iets succesvol is, normale zijn bij zoekertje verhuurd & added etc)
 	- Nieuwe aangemaakte listings worden niet toegevoegd in database onder tabel CategoryListing
