@@ -101,35 +101,6 @@
 
             <button type="submit" class="btn btn-success w-100 mt-4">Add Listing</button>
         </form>
-
-        <!-- Display Categorized Vehicles -->
-        <h2 class="my-5">Categorized Vehicles by Price</h2>
-        {% if categorized_vehicles %}
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Vehicle ID</th>
-                        <th>Vehicle Type</th>
-                        <th>Location</th>
-                        <th>Price per Day</th>
-                        <th>Category</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for vehicle in categorized_vehicles %}
-                        <tr>
-                            <td>{{ vehicle.vehicle_id }}</td>
-                            <td>{{ vehicle.vehicle_type }}</td>
-                            <td>{{ vehicle.location }}</td>
-                            <td>€{{ vehicle.price_per_day }}</td>
-                            <td>{{ vehicle.category }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p>No vehicles to display yet.</p>
-        {% endif %}
     </div>
 
     <footer class="bg-dark text-white text-center py-4 mt-5">
