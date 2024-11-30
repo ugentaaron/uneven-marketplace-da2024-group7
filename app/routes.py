@@ -427,7 +427,7 @@ def view_listing(listing_id):
 
         add_notification(
             receiver_id=listing.provider_id,
-            message=f"Nieuw huurverzoek ontvangen van {session['username']} voor '{listing.listing_title}' "
+            message=f"Nieuw huurverzoek ontvangen van {User.username} voor '{listing.listing_title}' "
                     f"van {start_date} tot {end_date}. Totaalbedrag: €{total_price:.2f}."
         )
 
@@ -790,14 +790,13 @@ def transaction_details(transaction_id):
 # 5. Review Routes
 
 # User reviews route
-@main.route('/user/<int:user_id>/reviews', methods=['GET'])
-def user_reviews(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return 'User not found', 404
+@main.route('/provider/<int:provider_id>', methods=['GET'])
+def view_provider(provider_id):
+    provider = User.query.get_or_404(provider_id)
+    listings = Listing.query.filter_by(provider_id=provider_id).all()
+    reviews = UserReview.query.filter_by(reviewed_id=provider_id).all()
+    return render_template('provider.html', provider=provider, listings=listings, reviews=reviews)
 
-    reviews = UserReview.query.filter_by(reviewed_id=user.id).all()
-    return render_template('user_reviews.html', user=user, reviews=reviews)
 
 
 # Add user review route
@@ -919,3 +918,4 @@ def delete_notification(notification_id):
         flash("Notification not found or you don't have permission to delete it.", "danger")
 
     return redirect(url_for('main.notifications'))
+    
