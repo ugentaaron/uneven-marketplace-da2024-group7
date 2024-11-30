@@ -15,13 +15,19 @@ main = Blueprint('main', __name__)
 def uploaded_file(filename):
     upload_folder = os.path.join(current_app.root_path, 'uploads')
     return send_from_directory(upload_folder, filename)
-# Register route
 @main.route('/register', methods=['GET', 'POST'])
+
+# register route
 def register():
     if request.method == 'POST':
         username = request.form['username']
+        email = request.form['email']
+        phone_number = request.form['phone_number']
+        address = request.form['address']
+
+        # Controleren of de gebruiker al bestaat
         if User.query.filter_by(username=username).first() is None:
-            new_user = User(username=username)
+            new_user = User(username=username, email=email, phone_number=phone_number, address=address)
             db.session.add(new_user)
             db.session.commit()
             session['user_id'] = new_user.id
@@ -61,7 +67,7 @@ def logout():
     return redirect(url_for('main.index'))
 
 
-# User profile route
+# user profile route
 @main.route('/profile', methods=['GET', 'POST'])
 def profile():
     if 'user_id' not in session:
@@ -70,14 +76,17 @@ def profile():
     user = User.query.get(session['user_id'])
 
     if request.method == 'POST':
+        # Als de gebruiker het profiel bijwerkt
         user.username = request.form['username']
         user.email = request.form['email']
-        user.phone_number = request.form['phone number']
+        user.phone_number = request.form['phone_number']
         user.address = request.form['address']
         db.session.commit()
+        flash("Profile updated!", "success")
         return redirect(url_for('main.profile'))
 
     return render_template('profile.html', user=user)
+
 
 
 # 2. Listing Management Routes
