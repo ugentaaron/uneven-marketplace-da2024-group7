@@ -158,11 +158,6 @@ def add_listing():
             # Commit All Changes
             db.session.commit()
 
-            # Categorize Vehicles (if necessary logic exists)
-            categorized_vehicles = categorize_vehicle_prices(db.session)  # Assuming this function exists
-            for vehicle_data in categorized_vehicles:
-                print(f"Vehicle {vehicle_data['vehicle_id']} categorized as {vehicle_data['category']}")
-
             print("Listing, categories, and vehicle committed to the database.")
 
             flash("Listing added successfully!", "success")
@@ -179,44 +174,6 @@ def add_listing():
     categories = Category.query.all()  # Fetch categories for dropdown  
     return render_template('add_listing.html', categories=categories, categorized_vehicles=[])
 
-    # Functie voertuigen categoriseren (algoritme 1)
-def categorize_vehicle_prices(session):
-    vehicles = session.query(Vehicle, Listing.price_per_day, Listing.location, Vehicle.vehicle_type).join(Listing).all()
-
-    grouped_vehicles = {}
-    for vehicle, price_per_day, location, vehicle_type in vehicles:
-        key = (vehicle_type, location)
-        if key not in grouped_vehicles:
-            grouped_vehicles[key] = []
-        grouped_vehicles[key].append((vehicle, price_per_day))
-
-    categorized_vehicles = []
-    for group_key, group_vehicles in grouped_vehicles.items():
-        prices = [price for _, price in group_vehicles]
-
-        if len(prices) < 3:
-            continue
-
-        low_threshold = np.percentile(prices, 33)
-        high_threshold = np.percentile(prices, 66)
-
-        for vehicle, price in group_vehicles:
-            if price <= low_threshold:
-                category = "Laag"
-            elif price <= high_threshold:
-                category = "Gemiddeld"
-            else:
-                category = "Hoog"
-
-            categorized_vehicles.append({
-                "vehicle_id": vehicle.vehicle_id,
-                "price_per_day": price,
-                "category": category,
-                "vehicle_type": group_key[0],
-                "location": group_key[1]
-            })
-
-    return categorized_vehicles
 
     # Fetch Categories for Form
     categories = Category.query.all()
