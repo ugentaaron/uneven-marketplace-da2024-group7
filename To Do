@@ -15,7 +15,7 @@ Templates:
 		- algemene informatie uit table 'Vehicle'
 		- informatie over verhuurder
 		- rent knop
-	klik op informatie over verhuurder:
+	klik op informatie over verhuurder: \DONE
 		- alle zoekertjes van deze verhuurder weergeven
 		- alle reviews over deze verhuurder weergeven
 		- knop om review te schrijven
