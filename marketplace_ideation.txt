@@ -1,24 +1,24 @@
 ### Marketplace Ideation
 
-Platform name: 
+Platform name: RentYourRidd
 
-Short description: 
+Short description: short and longterm possibility of renting vehicles (cars, bikes,...), P2P market
 
 # Taxonomy: Business Model
 
-User Type: Person | Organization
-Listing Kind: Good Transfer |Service
-Listing Type: Physical Good | Digital Good | Offline Serviced | Online Serviced
-Frequency: One-Time | Recurring
-Quantity: One | Many
-Price Discovery: Set by Provider | Set by Customer | Set by Market
-Price Calculation: By Quantity | By Feature | Auction | Quote
-Conversation System: Listing Conversation | Transaction Conversation
-Review by: By Customer | By Provider
-Review of: Of Listing | Of Provider
-Trust and Safety: ID Verification | Badges | In-app reporting
-Revenue Stream: Subscription | Commission | Fixed Fee | Listing Fee
-Revenue Source: Customer | Provider
+User Type: Person 
+Listing Kind: Service
+Listing Type: Offline Serviced
+Frequency: Recurring
+Quantity: Many
+Price Discovery: Set by Provider
+Price Calculation: By Quantity
+Conversation System: Listing Conversation and Transaction Conversation
+Review by: By Customer and By Provider
+Review of: Of Listing
+Trust and Safety: ID Verification
+Revenue Stream: Commission
+Revenue Source: Customer
 
 # Ontology model
 
@@ -31,6 +31,12 @@ Revenue Source: Customer | Provider
 As a [], I want to [], so that []. Prio
 As a [Customer], I want to [buy a product], so that [I can use it]. 2
 As a [provider], I want to [sell a product], so that [I earn money]. 1
+As a [user], I want to [login], so that [I can make a transaction/booking].
+As a [user], I want to [login], so that [I can create a listing].
+As a [Provider], I want to [add a listing] so that [I can rent out my vehicle].
+As a [provider], I want to [start a listing conversation] so that [I can communicate/ ask question].
+As a [platfom visitor], I want to [start a listing conversation] so that [I can communicate/ ask question].
+
 
 # UI Prototype
 
