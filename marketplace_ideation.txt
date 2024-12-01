@@ -28,14 +28,34 @@ Revenue Source: Customer
 
 # User stories
 
-As a [], I want to [], so that []. Prio
-As a [Customer], I want to [buy a product], so that [I can use it]. 2
-As a [provider], I want to [sell a product], so that [I earn money]. 1
+As a [], I want to [], so that [].
+As a [Customer], I want to [buy a product], so that [I can use it].
+As a [provider], I want to [sell a product], so that [I earn money].
 As a [user], I want to [login], so that [I can make a transaction/booking].
 As a [user], I want to [login], so that [I can create a listing].
 As a [Provider], I want to [add a listing] so that [I can rent out my vehicle].
 As a [provider], I want to [start a listing conversation] so that [I can communicate/ ask question].
 As a [platfom visitor], I want to [start a listing conversation] so that [I can communicate/ ask question].
+As a [platform visitor], I want to [register], so that [I become a user].
+As a [user], I want to [browse available vehicles], so that [I can find a vehicle to rent].
+As a [user], I want to [pay securely through the platform], so that [my payment details are protected].
+As a [vehicle owner], I want to [list my vehicle], so that [I can earn money renting it out].
+As a [user], I want to [filter search by location/price/..] so that [I can find the best fitting car].
+As a [user], I want to [view vehicle details], so that [I can make an informed rental decision].
+As a [vehicle owner], I want to [set price for my vehicle], so that [I can control how much I earn].
+as a [user], I want to [book a vehicle for specific dates], so that [I can secure travel plans].
+as a [vehicle owner], I want to [approve rental requests], so that [I have control over who rents my vehicle].
+As a [user], I want to [pay securely through the platform], so that [my payment details are protected].
+As a [vehicle owner], I want to [receive notifications of new bookings], so that [I can manage my rental schedule].
+As a [user], I want to [leave a review for a vehicle], so that [I can share my experience with others].
+As a [vehicle owner], I want to [see the reviews of my vehicle], so that [I can understand user satisfaction].
+As a [platform administrator], I want to [manage user accounts], so that [I can ensure compliance with policies].
+As a [platform administrator], I want to [monitor transactions], so that [I can track platform revenue].
+As a [user], I want to [save favorite vehicles], so that [I can easily find them later].
+As a [vehicle owner], I want to [set availability for my vehicle], so that [users can only book when it’s available].
+As a [user], I want to [cancel a booking if needed], so that [I have flexibility in my plans].
+As a [vehicle owner], I want to [view my rental history], so that [I can analyze my earnings over time].
+As a [user], I want to [contact the vehicle owner], so that [I can ask questions before booking].
 
 
 # UI Prototype
