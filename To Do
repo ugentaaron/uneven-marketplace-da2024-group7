@@ -1,56 +1,13 @@
-Templates:
-	Homepagina: \DONE
-		- header met logo, notificaties, log in/sign up, 'rent your ride' 
-		- advanced search
-		- alle listings
-	log in/sign up \DONE
-	notificaties:
-		- alle notificaties weergeven, gerangschikt op tijdstip \DONE
-		- moeten dus ook waar nodig notificaties inbrengen (bijv wanneer je zoekertje verhuurd is) \Done
-	'rent your ride' brengt je naar zoekertje plaatsen indien ingelogd \DONE *nog manier vinden om foto's te uploaden naar supabase - Done
-	klik op een willekeurige listing: \DONE
-		- titel
-		- foto's
-		- beschrijving
-		- algemene informatie uit table 'Vehicle'
-		- informatie over verhuurder
-		- rent knop
-	klik op informatie over verhuurder: \DONE
-		- alle zoekertjes van deze verhuurder weergeven
-		- alle reviews over deze verhuurder weergeven
-		- knop om review te schrijven
-	klik op rent: \DONE
-		- datums kiezen
-	dashboard: \DONE
-		- je eigen zoekertjes
-		- je gehuurde zoekertjes
-		- al je eigen reviews
-		- ook mogelijk informatie over profiel veranderen, etc.
-		- alle notificaties
-	review:
-		- rating + comment
-		- knop om terug te gaan, knop om te plaatsen
-		-> Done, enkel mogelijk als de booking end date < vandaag
-	
-		
-
-Routes:
-	- Minstens één algoritme (zie opdracht: 'innovative ideas will be rewarded')
-	- Gemiddelde pakken van alle reviews van een user en dit opslaan in table 'User'
-
-Extra:
-	- Revenue streams, nadenken hoe wij geld verdienen (bijv. een fee op elk zoekertje)
-
-Problemen:
- 	- Niet meer ingelogd volgens header wanneer je de index verlaat - Gefixt
-	- Notifications komen toe op login.html en niet op de pagina waar je u bevindt  - Ook gefixt, komen nu op elke pagina toe in midden vanboven
-
-	- Nieuwe gebruikers krijgen review score 0 ipv NULL
-	- Transaction heeft een totaal bedrag van 0.0 bij huren, moet nog aantal dagen * prijs per dag berekenen -> Done
-	- Geen manier om transaction te betalen, blijft dus op pending staan -> Done
-	- 'Categorized Vehicles by Price' werkt nog niet, of heb toch geen idee wat het zou moeten doen
-	- Wanneer je op index searched verdwijnen de platform statistics onderaan -> Done
-	- Knop 'browse listings' doet niets -> Wat wil je dat het doet ? Is eigenlijk gewoon een manier om naar de search tabel op de index te gaan
-	- Wanneer je op 'rent now' klikt verdwijnt dit zoekertje niet uit de lijst available listings - Done, gaat enkel de dates dat hij is verhuurd weghalen uit de kalender
-	- Notifications worden niet opgeslagen in database en komen dus ook niet bij notifications.html te staan - Done, verschil tussen flash notifications en echte (flash is gwn inlog, en als iets succesvol is, normale zijn bij zoekertje verhuurd & added etc)
-	- Nieuwe aangemaakte listings worden niet toegevoegd in database onder tabel CategoryListing
+- Toevoegen search op titel van zoekertje (zodat je bijv. kan zoeken op Porsche)
+- Vanaf je op search duwt zoekt hij wel juist, maar je input verdwijnt uit de zoekvelden
+- Indien we veel zoekertjes hebben, toevoegen van 'view more' zodat niet alle zoekertjes op de homepagina komen
+- Zorgen dat nieuw aangemaakte zoekertjes ook in CategoryListing gezet worden, anders worden ze niet gevonden bij onze filters
+- Alle notificaties in het Engels
+- Booking systeem nog is bekijken, zolang transactie op pending staat kan iedereen voor dezelfde periode nog steeds huren, en daarna kan diegene waar het op pending stond ook nog is huren dus dubbele booking
+- Zoekertjes waar de end-date overschreden is moeten verwijderd worden
+- Edit listing pagina moet nog worden uitgebreid
+- Bij booking details moet als provider dan informatie komen over de huurder en mogelijkheid om review te schrijven (momenteel staat er informatie over jezelf en kan je geen review schrijven)
+- Wanneer er een nieuwe user wordt aangemaakt krijgt hij een review score van 0 ipv NULL
+- We moeten volgens de opdracht rekening houden met 'scalability', misschien zorgen dat wanneer iets aangemaakt wordt het een ID krijgt van 8 cijfers
+- Database vullen met zoekertjes/users/reviews/...
+- !ALGORITME!
