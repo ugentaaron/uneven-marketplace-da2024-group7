@@ -1,6 +1,6 @@
-- Toevoegen search op titel van zoekertje (zodat je bijv. kan zoeken op Porsche)
-- Vanaf je op search duwt zoekt hij wel juist, maar je input verdwijnt uit de zoekvelden
-- Indien we veel zoekertjes hebben, toevoegen van 'view more' zodat niet alle zoekertjes op de homepagina komen
+DONE - Toevoegen search op titel van zoekertje (zodat je bijv. kan zoeken op Porsche) 
+DONE - Vanaf je op search duwt zoekt hij wel juist, maar je input verdwijnt uit de zoekvelden
+DONE - Indien we veel zoekertjes hebben, toevoegen van 'view more' zodat niet alle zoekertjes op de homepagina komen
 - Zorgen dat nieuw aangemaakte zoekertjes ook in CategoryListing gezet worden, anders worden ze niet gevonden bij onze filters
 - Alle notificaties in het Engels
 - Booking systeem nog is bekijken, zolang transactie op pending staat kan iedereen voor dezelfde periode nog steeds huren, en daarna kan diegene waar het op pending stond ook nog is huren dus dubbele booking
