@@ -4,6 +4,7 @@ DONE - Indien we veel zoekertjes hebben, toevoegen van 'view more' zodat niet al
 DONE (filter voor category werkt momenteel niet omdat er zoekertjes zijn die nog niet in deze tabel staan, 
 maar nieuwe zoekertjes worden er wel in geplaatst dus wanneer we database opnieuw vullen geen probleem meer) - Zorgen dat nieuw aangemaakte zoekertjes ook in CategoryListing gezet worden, anders worden ze niet gevonden bij onze filters
 - Alle notificaties in het Engels
+- end_date kan voor start_date liggen, hier moet een error komen wanneer iemand dit probeert
 - Booking systeem nog is bekijken, zolang transactie op pending staat kan iedereen voor dezelfde periode nog steeds huren, en daarna kan diegene waar het op pending stond ook nog is huren dus dubbele booking
 - Zoekertjes waar de end-date overschreden is moeten verwijderd worden
 - Edit listing pagina moet nog worden uitgebreid
