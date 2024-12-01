@@ -1,11 +1,9 @@
-from flask import Blueprint, session, request, redirect, url_for, render_template, flash
+from flask import Blueprint, session, request, redirect, url_for, render_template, flash, current_app, send_from_directory
 from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle, Booking
 from datetime import datetime, timedelta
 from app.utils import allowed_file
 import os
 from werkzeug.utils import secure_filename
-from flask import current_app  
-from flask import send_from_directory
 
 main = Blueprint('main', __name__)
 
@@ -100,30 +98,21 @@ def add_listing():
 
     if request.method == 'POST':
         try:
-
+            # Bestand uploaden (afhankelijk van of er een bestand wordt geüpload)
             file = request.files.get('listing_images')
             picture_path = None
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-
-                # Upload-folder ophalen uit de config
                 upload_folder = current_app.config['UPLOAD_FOLDER']
                 os.makedirs(upload_folder, exist_ok=True)
-
-                # Bestandslocatie bepalen
                 file_path = os.path.join(upload_folder, filename)
-
-                # Bestand opslaan
                 file.save(file_path)
-
-                # Relatief pad opslaan voor de database
                 picture_path = os.path.join('uploads', filename)
                 print(f"File uploaded successfully: {picture_path}")
             else:
                 print("No valid file uploaded or file type is not allowed.")
 
-
-            # Nieuwe listing toevoegen
+            # Nieuwe listing aanmaken
             new_listing = Listing(
                 listing_title=request.form['listing_name'],
                 price_per_day=float(request.form['price']),
@@ -131,28 +120,22 @@ def add_listing():
                 available_start=request.form['available_start'],
                 available_end=request.form['available_end'],
                 description=request.form['description'],
-                status=request.form.get('status', 'available'),  
+                status=request.form.get('status', 'available'),
                 picture=picture_path,
                 provider_id=session['user_id'],
                 created_at=datetime.utcnow()
             )
             db.session.add(new_listing)
-            db.session.flush() 
+            db.session.flush()  # Zorg ervoor dat de listing_id beschikbaar is
 
-            add_notification(
-                receiver_id=session['user_id'],
-                message=f"Je listing '{new_listing.listing_title}' is succesvol aangemaakt."
+            # Voeg CategoryListing toe
+            category_listing = CategoryListing(
+                listing_id=new_listing.id,
+                category_name=request.form['vehicle_type']
             )
-            
-            # Add Categories
-            selected_categories = request.form.getlist('categories') or []
-            for category_name in selected_categories:
-                category = Category.query.filter_by(name=category_name).first()
-                if category:
-                    category_listing = CategoryListing(categoryName=category.name, listingID=new_listing.id)
-                    db.session.add(category_listing)
+            db.session.add(category_listing)
 
-            # Add Vehicle
+            # Voeg voertuigdetails toe
             vehicle = Vehicle(
                 listing_id=new_listing.id,
                 make=request.form['make'],
@@ -164,28 +147,19 @@ def add_listing():
             )
             db.session.add(vehicle)
 
-            # Commit All Changes
+            # Commit alle wijzigingen
             db.session.commit()
-
-            print("Listing, categories, and vehicle committed to the database.")
 
             flash("Listing added successfully!", "success")
             return redirect(url_for('main.index'))
 
         except Exception as e:
-            # Rollback in case of errors
-            db.session.rollback()
-            print(f"Error during listing creation: {str(e)}")
+            db.session.rollback()  # Rollback bij een fout
             flash(f"An error occurred while adding the listing: {str(e)}", "danger")
             return redirect(url_for('main.add_listing'))
 
-    # Render the add listing page with necessary data
-    categories = Category.query.all()  # Fetch categories for dropdown  
-    return render_template('add_listing.html', categories=categories, categorized_vehicles=[])
-
-
-    # Fetch Categories for Form
-    categories = Category.query.all()
+    # Haal de beschikbare categorieën op voor het formulier
+    categories = Category.query.all()  # Fetch categories for dropdown
     return render_template('add_listing.html', categories=categories)
 
 
@@ -423,49 +397,96 @@ def view_listing(listing_id):
 # 3. Search & Dashboard Routes
 
 # Index route
+from flask import request, render_template, session
+from sqlalchemy import or_
+
 @main.route('/')
 def index():
-    all_listings = Listing.query.filter_by(status='available').all()
-    categories = Category.query.all()
-    notifications_unread_count = 0  # Default value if not logged in or no notifications
-    total_users = User.query.count()  
-    total_listings = Listing.query.count()  
-    rented_listings = Listing.query.filter_by(status='rented').count()  
-    total_transactions = Transaction.query.count() 
+    # Query parameters voor paginering
+    page = int(request.args.get('page', 1))
+    per_page = 6
+    start = (page - 1) * per_page
+    end = start + per_page
 
+    # Filters voor zoekcriteria (optioneel)
+    search_title = request.args.get('search_title', '')
+    search_location = request.args.get('location', '')
+    search_price_min = request.args.get('price_min', None, type=float)
+    search_price_max = request.args.get('price_max', None, type=float)
+    search_start_date = request.args.get('start_date', None)
+    search_end_date = request.args.get('end_date', None)
+    search_vehicle_type = request.args.get('vehicle_type', '')
+    sort_order = request.args.get('sort_order', '')
+
+    # Basisquery
+    query = Listing.query.filter_by(status='available')
+
+    # Zoekfilter toepassen
+    if search_title:
+        query = query.filter(Listing.listing_title.ilike(f"%{search_title}%"))
+    if search_location:
+        query = query.filter(Listing.location.ilike(f"%{search_location}%"))
+    if search_price_min:
+        query = query.filter(Listing.price_per_day >= search_price_min)
+    if search_price_max:
+        query = query.filter(Listing.price_per_day <= search_price_max)
+    if search_start_date:
+        query = query.filter(Listing.start_date >= search_start_date)
+    if search_end_date:
+        query = query.filter(Listing.end_date <= search_end_date)
+    if search_vehicle_type:
+        query = query.filter(Listing.category == search_vehicle_type)
+
+    # Sortering toepassen
+    if sort_order == 'price_asc':
+        query = query.order_by(Listing.price_per_day.asc())
+    elif sort_order == 'price_desc':
+        query = query.order_by(Listing.price_per_day.desc())
+
+    # Resultaten ophalen met paginering
+    all_listings = query.all()
+    paginated_listings = all_listings[start:end]
+    has_more = end < len(all_listings)
+
+    # Andere data voor de pagina
+    categories = Category.query.all()
+    total_users = User.query.count()
+    total_listings = Listing.query.count()
+    rented_listings = Listing.query.filter_by(status='rented').count()
+    total_transactions = Transaction.query.count()
+    notifications_unread_count = 0
+
+    # Controleer op ingelogde gebruiker
+    username = None
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
+        username = user.username
         notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()
         notifications_unread_count = len(notifications)
 
-        return render_template(
-            'index.html',
-            username=user.username,
-            all_listings=all_listings,
-            categories=categories,
-            notifications_unread_count=notifications_unread_count,
-            total_users=total_users,
-            total_listings=total_listings,
-            rented_listings=rented_listings,
-            total_transactions=total_transactions
-
-        )
-    
- 
-
-
+    # Template renderen
     return render_template(
         'index.html',
-        username=None,
-        all_listings=all_listings,
+        username=username,
+        all_listings=paginated_listings,
+        has_more=has_more,
+        page=page,
+        search_title=search_title,
+        search_location=search_location,
+        search_price_min=search_price_min,
+        search_price_max=search_price_max,
+        search_start_date=search_start_date,
+        search_end_date=search_end_date,
+        search_vehicle_type=search_vehicle_type,
+        sort_order=sort_order,
         categories=categories,
         notifications_unread_count=notifications_unread_count,
         total_users=total_users,
         total_listings=total_listings,
         rented_listings=rented_listings,
         total_transactions=total_transactions
-
     )
+
 
 
 @main.route('/search', methods=['GET'])
@@ -884,4 +905,55 @@ def delete_notification(notification_id):
         flash("Notification not found or you don't have permission to delete it.", "danger")
 
     return redirect(url_for('main.notifications'))
-    
+
+
+@main.route('/all_listings')
+def all_listings():
+    # Parameters ophalen van de zoekbalk
+    search_title = request.args.get('search_title', '')
+    search_location = request.args.get('location', '')
+    search_price_min = request.args.get('price_min', None, type=float)
+    search_price_max = request.args.get('price_max', None, type=float)
+    search_start_date = request.args.get('start_date', '')
+    search_end_date = request.args.get('end_date', '')
+    search_vehicle_type = request.args.get('vehicle_type', '')
+    sort_order = request.args.get('sort_order', '')
+
+    # Basisquery
+    query = Listing.query.filter_by(status='available')
+
+    # Zoekfilters toepassen
+    if search_title:
+        query = query.filter(Listing.listing_title.ilike(f"%{search_title}%"))
+    if search_location:
+        query = query.filter(Listing.location.ilike(f"%{search_location}%"))
+    if search_price_min:
+        query = query.filter(Listing.price_per_day >= search_price_min)
+    if search_price_max:
+        query = query.filter(Listing.price_per_day <= search_price_max)
+    if search_vehicle_type:
+        query = query.filter(Listing.category == search_vehicle_type)
+
+    # Sortering
+    if sort_order == "price_asc":
+        query = query.order_by(Listing.price_per_day.asc())
+    elif sort_order == "price_desc":
+        query = query.order_by(Listing.price_per_day.desc())
+
+    # Alle listings ophalen
+    all_listings = query.all()
+
+    # Weergeven van de pagina
+    return render_template(
+        'all_listings.html',
+        all_listings=all_listings,
+        search_title=search_title,
+        search_location=search_location,
+        search_price_min=search_price_min,
+        search_price_max=search_price_max,
+        search_start_date=search_start_date,
+        search_end_date=search_end_date,
+        search_vehicle_type=search_vehicle_type,
+        sort_order=sort_order,
+        categories=Category.query.all()
+    )
