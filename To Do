@@ -12,7 +12,7 @@ DONE - Zoekertjes waar de end-date overschreden is moeten op deactivated komen s
 DONE - Edit listing pagina moet nog worden uitgebreid
 - Bij booking details moet als provider dan informatie komen over de huurder en mogelijkheid om review te schrijven (momenteel staat er informatie over jezelf en kan je geen review schrijven)
 DONE - Wanneer er een nieuwe user wordt aangemaakt krijgt hij een review score van 0 ipv NULL
-- We moeten volgens de opdracht rekening houden met 'scalability', misschien zorgen dat wanneer iets aangemaakt wordt het een ID krijgt van 8 cijfers
+DONE - We moeten volgens de opdracht rekening houden met 'scalability', misschien zorgen dat wanneer iets aangemaakt wordt het een ID krijgt van 8 cijfers
 - Nog een fee toevoegen voor ons
 - Database vullen met zoekertjes/users/reviews/...
 - !ALGORITME!
