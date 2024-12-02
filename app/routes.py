@@ -8,7 +8,6 @@ from werkzeug.utils import secure_filename
 main = Blueprint('main', __name__)
 
 
-
 @main.route('/uploads/<filename>')
 def uploaded_file(filename):
     upload_folder = os.path.join(current_app.root_path, 'uploads')
@@ -45,7 +44,7 @@ def login():
         if user:
             session['user_id'] = user.id
             session['username'] = user.username
-            flash(f"Je bent ingelogd! Welkom, {user.username}.", "success")
+            flash(f"You are logged in! Welcome, {user.username}.", "success")
             # Als er een 'next' parameter in de URL zit, ga dan naar die URL
             next_page = request.args.get('next')
             if next_page:
@@ -61,7 +60,7 @@ def login():
 @main.route('/logout', methods=['POST'])
 def logout():
     session.pop('user_id', None)
-    flash("Je bent uitgelogd!", "success")
+    flash("You are logged out!", "success")
     return redirect(url_for('main.index'))
 
 
@@ -98,7 +97,14 @@ def add_listing():
 
     if request.method == 'POST':
         try:
-            # Bestand uploaden (afhankelijk van of er een bestand wordt geüpload)
+            # Validatie van datums
+            available_start = datetime.strptime(request.form['available_start'], '%Y-%m-%d')
+            available_end = datetime.strptime(request.form['available_end'], '%Y-%m-%d')
+            if available_end < available_start:
+                flash("The end date cannot be earlier than the start date.", "danger")
+                return redirect(request.url)
+
+            # Bestand uploaden (optioneel)
             file = request.files.get('listing_images')
             picture_path = None
             if file and allowed_file(file.filename):
@@ -152,45 +158,74 @@ def add_listing():
 
             flash("Listing added successfully!", "success")
             return redirect(url_for('main.index'))
-
         except Exception as e:
-            db.session.rollback()  # Rollback bij een fout
-            flash(f"An error occurred while adding the listing: {str(e)}", "danger")
-            return redirect(url_for('main.add_listing'))
+            db.session.rollback()
+            print(f"Error adding listing: {e}")
+            flash("An error occurred while adding the listing. Please try again.", "danger")
+            return redirect(request.url)
 
-    # Haal de beschikbare categorieën op voor het formulier
-    categories = Category.query.all()  # Fetch categories for dropdown
+    # GET: Toon de formulierpagina
+    categories = Category.query.all()  # Zorg ervoor dat 'categories' is gedefinieerd
     return render_template('add_listing.html', categories=categories)
 
 
 # Edit listing route
 @main.route('/edit_listing/<int:listing_id>', methods=['GET', 'POST'])
 def edit_listing(listing_id):
-    # Controleer of de gebruiker is ingelogd
-    if 'user_id' not in session:
-        flash("Je moet ingelogd zijn om deze actie uit te voeren.", "danger")
-        return redirect(url_for('main.login'))
-
-    user_id = session['user_id']
-
-    # Zoek de listing
     listing = Listing.query.get_or_404(listing_id)
-
-    # Controleer of de gebruiker de eigenaar is
-    if listing.provider_id != user_id:
-        flash("Je hebt geen toestemming om deze actie uit te voeren.", "danger")
-        return redirect(url_for('main.dashboard'))
+    vehicle = Vehicle.query.filter_by(listing_id=listing.id).first()
 
     if request.method == 'POST':
-        # Update de gegevens van de listing
-        listing.listing_title = request.form.get('listing_title')
-        listing.description = request.form.get('description')
-        listing.price_per_day = float(request.form.get('price_per_day'))
-        db.session.commit()
-        flash(f"Zoekertje '{listing.listing_title}' is succesvol bijgewerkt.", "success")
-        return redirect(url_for('main.dashboard'))
+        listing.listing_title = request.form['listing_name']
+        listing.price_per_day = request.form['price']
+        listing.location = request.form['location']
+        listing.available_start = request.form['available_start']
+        listing.available_end = request.form['available_end']
+        listing.description = request.form['description']
+        listing.status = request.form['status']
 
-    return render_template('edit_listing.html', listing=listing)
+        vehicle.make = request.form['make']
+        vehicle.year = request.form['year']
+        vehicle.vehicle_type = request.form['vehicle_type']
+        vehicle.fuel_type = request.form['fuel_type']
+        vehicle.seats = request.form['seats']
+        vehicle.extra_features = request.form['extra_features']
+
+        # Update images if any are uploaded
+        if 'listing_images' in request.files:
+            try:
+                # Validatie van datums
+                available_start = datetime.strptime(request.form['available_start'], '%Y-%m-%d')
+                available_end = datetime.strptime(request.form['available_end'], '%Y-%m-%d')
+                if available_end < available_start:
+                    flash("The end date cannot be earlier than the start date.", "danger")
+                    return redirect(request.url)
+
+                # Bestand uploaden (optioneel)
+                file = request.files.get('listing_images')
+                picture_path = None
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    upload_folder = current_app.config['UPLOAD_FOLDER']
+                    os.makedirs(upload_folder, exist_ok=True)
+                    file_path = os.path.join(upload_folder, filename)
+                    file.save(file_path)
+                    picture_path = os.path.join('uploads', filename)
+                    print(f"File uploaded successfully: {picture_path}")
+                else:
+                    print("No valid file uploaded or file type is not allowed.")
+
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error adding listing: {e}")
+                flash("An error occurred while adding the listing. Please try again.", "danger")
+                return redirect(request.url)
+
+        db.session.commit()
+        return redirect(url_for('main.edit_listing', listing_id=listing.id))
+
+    categories = Category.query.all()
+    return render_template('edit_listing.html', listing=listing, vehicle=vehicle, categories=categories)
 
 
 # Delete listing route
@@ -213,37 +248,37 @@ def delete_listing(listing_id):
 # Deactivate listing route
 @main.route('/deactivate_listing/<int:listing_id>', methods=['POST'])
 def deactivate_listing(listing_id):
-    # Controleer of de gebruiker is ingelogd
+    # Check if the user is logged in
     if 'user_id' not in session:
-        flash("Je moet ingelogd zijn om deze actie uit te voeren.", "danger")
+        flash("You must be logged in to perform this action.", "danger")
         return redirect(url_for('main.login'))
 
     user_id = session['user_id']
 
-    # Zoek de listing
+    # Find the listing
     listing = Listing.query.get_or_404(listing_id)
 
-    # Controleer of de gebruiker de eigenaar is
+    # Check if the user is the owner
     if listing.provider_id != user_id:
-        flash("Je hebt geen toestemming om deze actie uit te voeren.", "danger")
+        flash("You do not have permission to perform this action.", "danger")
         return redirect(url_for('main.dashboard'))
 
-    # Controleer de status
+    # Check the status
     if listing.status != "available":
-        flash("Deze zoekertje is al gedeactiveerd of heeft een andere status.", "warning")
+        flash("This listing is already deactivated or has a different status.", "warning")
         return redirect(url_for('main.dashboard'))
 
-    # Update de status naar "deactivated"
+    # Update the status to "deactivated"
     listing.status = "deactivated"
     db.session.commit()
 
-    # Voeg een notificatie toe voor de eigenaar
+    # Add a notification for the owner
     add_notification(
         receiver_id=user_id,
-        message=f"Je zoekertje '{listing.listing_title}' is succesvol gedeactiveerd."
+        message=f"Your listing '{listing.listing_title}' has been successfully deactivated."
     )
 
-    # Voeg een notificatie toe voor huurders met pending transacties - voor pending transacties
+    # Add a notification for renters with pending transactions
     pending_transactions = Transaction.query.filter_by(
         listing_id=listing_id,
         status="pending"
@@ -252,18 +287,19 @@ def deactivate_listing(listing_id):
     for transaction in pending_transactions:
         add_notification(
             receiver_id=transaction.renter_id,
-            message=f"Het zoekertje '{listing.listing_title}' dat je wilde huren is gedeactiveerd door de eigenaar. "
-                    "Controleer je transacties voor meer informatie."
+            message=f"The listing '{listing.listing_title}' that you wanted to rent has been deactivated by the owner. "
+                    "Check your transactions for more information."
         )
 
-    flash(f"Zoekertje '{listing.listing_title}' is gedeactiveerd.", "success")
+    flash(f"Listing '{listing.listing_title}' has been deactivated.", "success")
     return redirect(url_for('main.dashboard'))
+
 
 # Activate listing route
 @main.route('/activate_listing/<int:listing_id>', methods=['POST'])
 def activate_listing(listing_id):
     if 'user_id' not in session:
-        flash("Je moet ingelogd zijn om deze actie uit te voeren.", "danger")
+        flash("You must be logged in to perform this action.", "danger")
         return redirect(url_for('main.login'))
 
     user_id = session['user_id']
@@ -271,26 +307,27 @@ def activate_listing(listing_id):
     listing = Listing.query.get_or_404(listing_id)
 
     if listing.provider_id != user_id:
-        flash("Je hebt geen toestemming om deze actie uit te voeren.", "danger")
+        flash("You do not have permission to perform this action.", "danger")
         return redirect(url_for('main.dashboard'))
 
-    # Controleer of de listing al "deactivated" is
+    # Check if the listing is already "deactivated"
     if listing.status != "deactivated":
-        flash("Dit zoekertje is al beschikbaar of heeft een andere status.", "warning")
+        flash("This listing is already available or has a different status.", "warning")
         return redirect(url_for('main.dashboard'))
 
-    # Update de status naar "available"
+    # Update the status to "available"
     listing.status = "available"
     db.session.commit()
 
-    # Voeg een notificatie toe voor de eigenaar
+    # Add a notification for the owner
     add_notification(
         receiver_id=user_id,
-        message=f"Je zoekertje '{listing.listing_title}' is succesvol opnieuw geactiveerd en beschikbaar gemaakt."
+        message=f"Your listing '{listing.listing_title}' has been successfully reactivated and made available."
     )
 
-    flash(f"Zoekertje '{listing.listing_title}' is nu weer beschikbaar.", "success")
+    flash(f"Listing '{listing.listing_title}' is now available again.", "success")
     return redirect(url_for('main.dashboard'))
+
 
 
 @main.route('/listing/<int:listing_id>', methods=['GET', 'POST'])
@@ -367,14 +404,16 @@ def view_listing(listing_id):
 
         add_notification(
             receiver_id=listing.provider_id,
-            message=f"Nieuw huurverzoek ontvangen van {User.username} voor '{listing.listing_title}' "
-                    f"van {start_date} tot {end_date}. Totaalbedrag: €{total_price:.2f}."
+            message=f"New rental request received from {User.username} for '{listing.listing_title}' "
+                    f"from {start_date} to {end_date}. Total amount: €{total_price:.2f}."
+
         )
 
         add_notification(
             receiver_id=session['user_id'],
-            message=f"Je huurverzoek voor '{listing.listing_title}' is ingediend. "
-                    f"Bekijk je transactie <a href='{url_for('main.transaction_details', transaction_id=new_transaction.id)}'>hier</a>."
+            message=f"Your rental request for '{listing.listing_title}' has been submitted. "
+                    f"View your transaction <a href='{url_for('main.transaction_details', transaction_id=new_transaction.id)}'>here</a>."
+
         )
 
         flash("Transaction created successfully!", "success")
@@ -397,11 +436,9 @@ def view_listing(listing_id):
 # 3. Search & Dashboard Routes
 
 # Index route
-from flask import request, render_template, session
-from sqlalchemy import or_
-
 @main.route('/')
 def index():
+    deactivate_expired_listings()
     # Query parameters voor paginering
     page = int(request.args.get('page', 1))
     per_page = 6
@@ -550,68 +587,67 @@ def dashboard():
     user = User.query.get(user_id)
 
     if not user:
-        flash("Gebruiker niet gevonden.", "danger")
+        flash("User not found.", "danger")
         return redirect(url_for('main.logout'))
 
-    # Wijzig profielgegevens
+    # Update profile details
     if request.method == 'POST':
         new_username = request.form.get('username')
         new_email = request.form.get('email')
         new_phone_number = request.form.get('phone_number')
         new_address = request.form.get('address')
 
-        # Controleer en update username
+        # Check and update username
         if new_username and new_username != user.username:
             if User.query.filter_by(username=new_username).first():
-                flash("Deze gebruikersnaam is al in gebruik.", "danger")
+                flash("This username is already taken.", "danger")
             else:
                 user.username = new_username
 
-        # Controleer en update e-mail
+        # Check and update email
         if new_email and new_email != user.email:
             if User.query.filter_by(email=new_email).first():
-                flash("Dit e-mailadres is al in gebruik.", "danger")
+                flash("This email address is already in use.", "danger")
             else:
                 user.email = new_email
 
-        # Update telefoonnummer
+        # Update phone number
         if new_phone_number and new_phone_number != user.phone_number:
             user.phone_number = new_phone_number
 
-        # Update adres
+        # Update address
         if new_address and new_address != user.address:
             user.address = new_address
 
-        # Print de wijzigingen voor debuggen
+        # Print changes for debugging
         print(f"Updated user: {user.username}, {user.email}, {user.phone_number}, {user.address}")
-        
+
         try:
-            # Opslaan in de database
+            # Save to database
             db.session.commit()
-            flash("Profiel succesvol bijgewerkt!", "success")
+            flash("Profile updated successfully!", "success")
         except Exception as e:
-            flash(f"Er is een fout opgetreden: {e}", "danger")
+            flash(f"An error occurred: {e}", "danger")
             db.session.rollback()
 
         return redirect(url_for('main.dashboard'))
-
 
     # Reviews
     written_reviews = UserReview.query.filter_by(reviewer_id=user_id).all()
     received_reviews = UserReview.query.filter_by(reviewed_id=user_id).all()
 
-    # Eigen zoekertjes
+    # User's own listings
     own_listings = Listing.query.filter_by(provider_id=user_id).all()
 
-    # Gehuurde zoekertjes
+    # Listings rented by the user
     rented_transactions = Transaction.query.filter_by(renter_id=user_id).all()
     rented_listings = [trans.listing for trans in rented_transactions]
 
-    # Transactiegeschiedenis
+    # Transaction history
     transactions = Transaction.query.filter((Transaction.renter_id == user_id) |
                                             (Transaction.listing.has(provider_id=user_id))).all()
 
-    # Ongelezen notificaties
+    # Unread notifications
     notifications = Notification.query.filter_by(receiver_id=user_id, viewed=False).all()
     notifications_unread_count = Notification.query.filter_by(receiver_id=user_id, viewed=False).count()
 
@@ -631,6 +667,7 @@ def dashboard():
         notifications_unread_count=notifications_unread_count,
         bookings=bookings
     )
+
 
 @main.route('/booking/<int:booking_id>', methods=['GET', 'POST'])
 def booking_details(booking_id):
@@ -746,23 +783,24 @@ def transaction_details(transaction_id):
             db.session.add(new_booking)
             db.session.commit()
 
+            # Add notification for the renter
             add_notification(
                 receiver_id=transaction.renter_id,
-                message=f"Je betaling voor '{transaction.listing.listing_title}' van {transaction.start_date} tot {transaction.end_date} "
-                        f"is succesvol verwerkt. Het totaalbedrag is €{transaction.total_price:.2f}. Bekijk je boeking "
-                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>hier</a>."
+                message=f"Your payment for '{transaction.listing.listing_title}' from {transaction.start_date} to {transaction.end_date} "
+                        f"has been successfully processed. The total amount is €{transaction.total_price:.2f}. View your booking "
+                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>here</a>."
             )
 
+            # Add notification for the provider
             add_notification(
                 receiver_id=transaction.listing.provider_id,
-                message=f"De betaling voor het huurverzoek van '{transaction.listing.listing_title}' van {transaction.start_date} "
-                        f"tot {transaction.end_date} is voltooid. Het totaalbedrag is €{transaction.total_price:.2f}. Controleer de boeking "
-                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>hier</a>."
+                message=f"The payment for the rental request of '{transaction.listing.listing_title}' from {transaction.start_date} "
+                        f"to {transaction.end_date} has been completed. The total amount is €{transaction.total_price:.2f}. Check the booking "
+                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>here</a>."
             )
 
             flash("Payment processed successfully! The transaction is now marked as processed.", "success")
             return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
-
 
     return render_template(
         'transaction_details.html',
@@ -772,6 +810,7 @@ def transaction_details(transaction_id):
         is_renter=is_renter,
         is_provider=is_provider
     )
+
 
 
 # 5. Review Routes
@@ -792,21 +831,21 @@ def add_review(user_id):
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
 
-    current_user_id = session['user_id']  
-    reviewed_user = User.query.get_or_404(user_id)  
+    current_user_id = session['user_id']
+    reviewed_user = User.query.get_or_404(user_id)
     if request.method == 'POST':
-        # Haal de benodigde gegevens uit het formulier
+        # Retrieve the necessary data from the form
         rating = int(request.form['rating'])
         comment = request.form.get('comment', '').strip()
         listing_id = request.form.get('listing_id')
 
-        # Controleer of de listing bestaat en geassocieerd is met de reviewed user
+        # Check if the listing exists and is associated with the reviewed user
         listing = Listing.query.get_or_404(listing_id)
         if listing.provider_id != user_id:
-            flash("De opgegeven listing hoort niet bij de ontvanger van de review.", "danger")
+            flash("The specified listing does not belong to the review recipient.", "danger")
             return redirect(url_for('main.add_review', user_id=user_id))
 
-        # Maak en sla de review op
+        # Create and save the review
         new_review = UserReview(
             reviewer_id=current_user_id,
             reviewed_id=user_id,
@@ -818,21 +857,21 @@ def add_review(user_id):
         db.session.add(new_review)
         db.session.commit()
 
-        # Voeg notificatie toe voor de ontvanger van de review
+        # Add notification for the recipient of the review
         add_notification(
             receiver_id=user_id,
-            message=f"Je hebt een nieuwe review ontvangen van {session.get('username', 'iemand')}: "
-                    f"{rating} sterren. Opmerking: '{comment}' voor de listing '{listing.listing_title}'."
+            message=f"You have received a new review from {session.get('username', 'someone')}: "
+                    f"{rating} stars. Comment: '{comment}' for the listing '{listing.listing_title}'."
         )
 
-        # Voeg notificatie toe voor de reviewer
+        # Add notification for the reviewer
         add_notification(
             receiver_id=current_user_id,
-            message=f"Je hebt succesvol een review achtergelaten voor {reviewed_user.username}: "
-                    f"{rating} sterren. Opmerking: '{comment}' voor de listing '{listing.listing_title}'."
+            message=f"You have successfully left a review for {reviewed_user.username}: "
+                    f"{rating} stars. Comment: '{comment}' for the listing '{listing.listing_title}'."
         )
 
-        flash("Je hebt succesvol een review achtergelaten!", "success")
+        flash("You have successfully left a review!", "success")
         return redirect(url_for('main.user_reviews', user_id=user_id))
 
     return render_template('add_review.html', user_id=user_id, reviewed_user=reviewed_user)
@@ -853,14 +892,8 @@ def add_notification(receiver_id, message):
     db.session.add(new_notification)
     db.session.commit()
 
-# View notifications route
-def get_notifications_for_user(username):
-    # Dit zou je moeten aanpassen aan de logica van je app, bijvoorbeeld een database-query
-    return [
-        {"id": 1, "message": "Nieuwe auto toegevoegd!", "read": False},
-        {"id": 2, "message": "Je reservering is bevestigd.", "read": True},
-    ]
 
+# View notifications route
 @main.route('/notifications')
 def notifications():
     if 'user_id' not in session:
@@ -957,3 +990,12 @@ def all_listings():
         sort_order=sort_order,
         categories=Category.query.all()
     )
+
+
+def deactivate_expired_listings():
+    listings = Listing.query.filter(Listing.available_end < datetime.utcnow().date(), Listing.status != 'deactivated').all()
+    for listing in listings:
+        listing.deactivate_if_expired()
+
+    # Commit the changes
+    db.session.commit()
