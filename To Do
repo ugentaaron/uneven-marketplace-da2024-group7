@@ -3,13 +3,16 @@ DONE - Vanaf je op search duwt zoekt hij wel juist, maar je input verdwijnt uit 
 DONE - Indien we veel zoekertjes hebben, toevoegen van 'view more' zodat niet alle zoekertjes op de homepagina komen
 DONE (filter voor category werkt momenteel niet omdat er zoekertjes zijn die nog niet in deze tabel staan, 
 maar nieuwe zoekertjes worden er wel in geplaatst dus wanneer we database opnieuw vullen geen probleem meer) - Zorgen dat nieuw aangemaakte zoekertjes ook in CategoryListing gezet worden, anders worden ze niet gevonden bij onze filters
-- Alle notificaties in het Engels
-- end_date kan voor start_date liggen, hier moet een error komen wanneer iemand dit probeert
+DONE - Alle notificaties in het Engels
+DONE - end_date kan voor start_date liggen, hier moet een error komen wanneer iemand dit probeert
 - Booking systeem nog is bekijken, zolang transactie op pending staat kan iedereen voor dezelfde periode nog steeds huren, en daarna kan diegene waar het op pending stond ook nog is huren dus dubbele booking
-- Zoekertjes waar de end-date overschreden is moeten verwijderd worden
-- Edit listing pagina moet nog worden uitgebreid
+- booking kunnen annuleren
+DONE - Zoekertjes waar de end-date overschreden is moeten op deactivated komen staan
+- Zoekertjes die over de volledige periode verhuurd zijn staan nog steeds op active
+DONE - Edit listing pagina moet nog worden uitgebreid
 - Bij booking details moet als provider dan informatie komen over de huurder en mogelijkheid om review te schrijven (momenteel staat er informatie over jezelf en kan je geen review schrijven)
-- Wanneer er een nieuwe user wordt aangemaakt krijgt hij een review score van 0 ipv NULL
+DONE - Wanneer er een nieuwe user wordt aangemaakt krijgt hij een review score van 0 ipv NULL
 - We moeten volgens de opdracht rekening houden met 'scalability', misschien zorgen dat wanneer iets aangemaakt wordt het een ID krijgt van 8 cijfers
+- Nog een fee toevoegen voor ons
 - Database vullen met zoekertjes/users/reviews/...
 - !ALGORITME!
