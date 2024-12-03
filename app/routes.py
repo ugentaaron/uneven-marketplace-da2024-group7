@@ -578,6 +578,8 @@ def search():
 )
 
 
+import pandas as pd
+from flask import jsonify
 @main.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if 'user_id' not in session:
@@ -590,7 +592,7 @@ def dashboard():
         flash("User not found.", "danger")
         return redirect(url_for('main.logout'))
 
-    # Update profile details
+    # Wijzig profielgegevens
     if request.method == 'POST':
         new_username = request.form.get('username')
         new_email = request.form.get('email')
@@ -636,25 +638,45 @@ def dashboard():
     written_reviews = UserReview.query.filter_by(reviewer_id=user_id).all()
     received_reviews = UserReview.query.filter_by(reviewed_id=user_id).all()
 
-    # User's own listings
+    # Eigen zoekertjes
     own_listings = Listing.query.filter_by(provider_id=user_id).all()
 
-    # Listings rented by the user
+    # Gehuurde zoekertjes
     rented_transactions = Transaction.query.filter_by(renter_id=user_id).all()
     rented_listings = [trans.listing for trans in rented_transactions]
 
-    # Transaction history
+    # Transactiegeschiedenis
     transactions = Transaction.query.filter((Transaction.renter_id == user_id) |
                                             (Transaction.listing.has(provider_id=user_id))).all()
 
-    # Unread notifications
+    # Ongelezen notificaties
     notifications = Notification.query.filter_by(receiver_id=user_id, viewed=False).all()
     notifications_unread_count = Notification.query.filter_by(receiver_id=user_id, viewed=False).count()
 
     bookings = Booking.query.filter(
-        (Booking.renter_id == user_id) | (Booking.listing.has(provider_id=user_id))
+        (Booking.renter_id == user_id) | (Booking.listing.has(provider_id=user_id))  
     ).all()
 
+    # API-achtige logica om omzetgegevens te berekenen
+    if request.args.get('data') == 'revenue':
+        try:
+            transactions = Transaction.query.join(Listing).filter(Listing.provider_id == user_id).all()
+            data = [{'date': t.created_at, 'revenue': t.total_price} for t in transactions]
+
+            df = pd.DataFrame(data)
+            df['date'] = pd.to_datetime(df['date'])
+            df['month'] = df['date'].dt.to_period('M')
+
+            monthly_revenue = df.groupby('month')['revenue'].sum().reset_index()
+            monthly_revenue['month'] = monthly_revenue['month'].apply(lambda x: x.strftime('%m-%Y'))
+
+
+            return jsonify(monthly_revenue.to_dict(orient="records"))
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+
+    # Normale HTML-rendering
     return render_template(
         'dashboard.html',
         user=user,
