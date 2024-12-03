@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ user.username }}'s Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
 </head>
 <body>
     {% include 'header.html' %}
@@ -108,6 +109,15 @@
 
             <!-- Right Column: Listings and Transactions -->
             <div class="col-md-8">
+		    <!-- Revenue Chart Section -->
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Monthly Revenue</h5>
+                        <div id="revenue-chart" style="height: 400px;"></div>
+                        <p id="no-revenue-message" class="text-muted" style="display: none;">Currently, you don't have any revenue.</p>
+                    </div>
+                </div>
+
                 <!-- Listings Section -->
                 <div class="card mb-4 shadow-sm">
                     <div class="card-body">
@@ -250,5 +260,79 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        async function fetchAndRenderChart() {
+            console.log("Fetching revenue data..."); 
+        
+            try {
+                const response = await fetch("/dashboard?data=revenue");
+                
+                if (!response.ok) {
+                    console.error(`Error fetching data: ${response.status} ${response.statusText}`);
+                    
+                    document.getElementById('no-revenue-message').style.display = 'block';
+                    document.getElementById('revenue-chart').style.display = 'none';
+                    return;
+                }
+        
+                const data = await response.json();
+                console.log("API Response:", data); 
+                
+                if (!data || data.length === 0) {
+                    console.warn("No revenue data available.");
+                    document.getElementById('no-revenue-message').style.display = 'block';
+                    document.getElementById('revenue-chart').style.display = 'none';
+                    return;
+                }
+        
+                
+                document.getElementById('no-revenue-message').style.display = 'none';
+                document.getElementById('revenue-chart').style.display = 'block';
+        
+                const months = data.map(item => item.month);
+                const revenues = data.map(item => item.revenue);
+        
+                const trace = {
+                    x: months,
+                    y: revenues,
+                    type: 'bar',
+                    marker: { 
+                        color: 'rgba(64, 133, 88, 0.5)',  
+                        line: {
+                            color: 'rgba(64, 133, 88, 1)',  
+                            width: 4 
+                        }
+                    },
+                    hovertemplate: 'Month: %{x}<br>Revenue: €%{y}<extra></extra>',
+                };
+                
+        
+                const layout = {
+                    title: '',
+                    xaxis: { 
+                        title: 'Month', 
+                        tickmode: 'array', 
+                        tickvals: months, 
+                        ticktext: months,
+                        bargap: 0.2, 
+                        bargroupgap: 0.1
+                    },
+                    yaxis: { title: 'Revenue (€)' },
+                };
+                
+        
+                Plotly.newPlot('revenue-chart', [trace], layout);
+            } catch (error) {
+                console.error("An error occurred:", error);
+                document.getElementById('no-revenue-message').style.display = 'block';
+                document.getElementById('revenue-chart').style.display = 'none';
+            }
+        }
+        
+        fetchAndRenderChart();
+        
+        
+    </script>
 </body>
 </html>
+
