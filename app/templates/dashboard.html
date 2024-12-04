@@ -176,7 +176,6 @@
                                             <th>Listing</th>
                                             <th>Renter</th>
                                             <th>Status</th>
-                                            <th>Price</th>
                                             <th>Dates</th>
                                             <th>Actions</th>
                                         </tr>
@@ -188,7 +187,6 @@
                                                 <td>{{ booking.listing.listing_title }}</td>
                                                 <td>{{ booking.renter.username }}</td>
                                                 <td>{{ booking.status }}</td>
-                                                <td>€{{ "%.2f"|format((booking.end_date - booking.start_date).days * booking.listing.price_per_day) }}</td>
                                                 <td>{{ booking.start_date }} to {{ booking.end_date }}</td>
                                                 <td class="d-flex gap-1">
                                                     <a href="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}" 
@@ -217,7 +215,7 @@
                                             <th>Listing</th>
                                             <th>Status</th>
                                             <th>Total Price</th>
-                                            <th>Dates</th>
+                                            <th>Date</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -238,7 +236,7 @@
                                                     {% endif %}
                                                 </td>
                                                 <td>€{{ "%.2f"|format(transaction.total_price if transaction.total_price is not none else 0.0) }}</td>
-                                                <td>{{ transaction.start_date }} to {{ transaction.end_date }}</td>
+                                                <td>{{ transaction.created_at }}</td>
                                                 <td>
                                                     <a href="{{ url_for('main.transaction_details', transaction_id=transaction.id) }}" class="btn btn-sm btn-success">View</a>
                                                 </td>
@@ -336,4 +334,3 @@
     </script>
 </body>
 </html>
-
