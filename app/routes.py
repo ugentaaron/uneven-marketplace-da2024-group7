@@ -5,6 +5,7 @@ from app.utils import allowed_file
 import os
 from werkzeug.utils import secure_filename
 from sqlalchemy import func
+from sqlalchemy.orm import aliased
 import mimetypes
 from supabase import create_client, Client
 
@@ -480,35 +481,46 @@ def view_listing(listing_id):
 
         total_price = rental_days * listing.price_per_day
 
+        # Create the transaction
         new_transaction = Transaction(
             listing_id=listing.id,
             renter_id=session['user_id'],
             status="pending",
-            start_date=start_date,
-            end_date=end_date,
             total_price=total_price,
             created_at=datetime.utcnow()
         )
         db.session.add(new_transaction)
         db.session.commit()
 
+        # Create the booking immediately after the transaction
+        new_booking = Booking(
+            listing_id=listing.id,
+            renter_id=session['user_id'],
+            transaction_id=new_transaction.id,
+            start_date=start_date,
+            end_date=end_date,
+            status="pending",  # Booking status can initially be 'pending'
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_booking)
+        db.session.commit()
+
+        # Add notification for provider
         add_notification(
             receiver_id=listing.provider_id,
             message=f"New rental request received from {User.username} for '{listing.listing_title}' "
                     f"from {start_date} to {end_date}. Total amount: €{total_price:.2f}."
-
         )
 
+        # Add notification for renter
         add_notification(
             receiver_id=session['user_id'],
             message=f"Your rental request for '{listing.listing_title}' has been submitted. "
                     f"View your transaction <a href='{url_for('main.transaction_details', transaction_id=new_transaction.id)}'>here</a>."
-
         )
 
-        flash("Transaction created successfully!", "success")
+        flash("Transaction created and booking initiated successfully!", "success")
         return redirect(url_for('main.transaction_details', transaction_id=new_transaction.id))
-
 
     return render_template(
         'view_listing.html',
@@ -521,6 +533,7 @@ def view_listing(listing_id):
         average_review_score=average_review_score,
         unavailable_dates=unavailable_dates
     )
+
 
 
 # 3. Search & Dashboard Routes
@@ -546,6 +559,7 @@ def index():
     sort_order = request.args.get('sort_order', '')
 
     # Basisquery
+    category_alias = aliased(CategoryListing)
     query = Listing.query.filter_by(status='available')
 
     # Zoekfilter toepassen
@@ -562,7 +576,8 @@ def index():
     if search_end_date:
         query = query.filter(Listing.end_date <= search_end_date)
     if search_vehicle_type:
-        query = query.filter(Listing.category == search_vehicle_type)
+        query = query.join(category_alias, category_alias.listing_id == Listing.id) \
+            .filter(category_alias.category_name == search_vehicle_type)
 
     # Sortering toepassen
     if sort_order == 'price_asc':
@@ -865,10 +880,17 @@ def transaction_details(transaction_id):
     provider = User.query.get(listing.provider_id)
     current_user_id = session.get('user_id')
 
+    # Check if current user is renter or provider
     is_renter = transaction.renter_id == current_user_id
     is_provider = listing.provider_id == current_user_id
 
-    transaction = Transaction.query.get_or_404(transaction_id)
+    # Get the booking related to the transaction (since start_date and end_date are now in Booking)
+    booking = Booking.query.filter_by(transaction_id=transaction.id).first()
+
+    # If booking does not exist, handle it gracefully (e.g., display an error or redirect)
+    if not booking:
+        flash("Booking not found for this transaction.", "danger")
+        return redirect(url_for('main.index'))
 
     if request.method == 'POST':
         action = request.form.get('action')
@@ -883,32 +905,20 @@ def transaction_details(transaction_id):
                 flash("You are not authorized to process this payment.", "danger")
                 return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
 
-            new_booking = Booking(
-                listing_id=transaction.listing_id,
-                renter_id=transaction.renter_id,
-                transaction_id=transaction.id,
-                start_date=transaction.start_date,
-                end_date=transaction.end_date,
-                status="confirmed",
-                created_at=datetime.utcnow()
-            )
-            db.session.add(new_booking)
-            db.session.commit()
-
             # Add notification for the renter
             add_notification(
                 receiver_id=transaction.renter_id,
-                message=f"Your payment for '{transaction.listing.listing_title}' from {transaction.start_date} to {transaction.end_date} "
+                message=f"Your payment for '{transaction.listing.listing_title}' from {booking.start_date} to {booking.end_date} "
                         f"has been successfully processed. The total amount is €{transaction.total_price:.2f}. View your booking "
-                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>here</a>."
+                        f"<a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>here</a>."
             )
 
             # Add notification for the provider
             add_notification(
                 receiver_id=transaction.listing.provider_id,
-                message=f"The payment for the rental request of '{transaction.listing.listing_title}' from {transaction.start_date} "
-                        f"to {transaction.end_date} has been completed. The total amount is €{transaction.total_price:.2f}. Check the booking "
-                        f"<a href='{url_for('main.booking_details', booking_id=new_booking.booking_id)}'>here</a>."
+                message=f"The payment for the rental request of '{transaction.listing.listing_title}' from {booking.start_date} "
+                        f"to {booking.end_date} has been completed. The total amount is €{transaction.total_price:.2f}. Check the booking "
+                        f"<a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>here</a>."
             )
 
             flash("Payment processed successfully! The transaction is now marked as processed.", "success")
@@ -920,8 +930,10 @@ def transaction_details(transaction_id):
         listing=listing,
         provider=provider,
         is_renter=is_renter,
-        is_provider=is_provider
+        is_provider=is_provider,
+        booking=booking  # Pass booking object to template
     )
+
 
 
 
@@ -1065,6 +1077,7 @@ def all_listings():
     sort_order = request.args.get('sort_order', '')
 
     # Basisquery
+    category_alias = aliased(CategoryListing)
     query = Listing.query.filter_by(status='available')
 
     # Zoekfilters toepassen
@@ -1077,7 +1090,8 @@ def all_listings():
     if search_price_max:
         query = query.filter(Listing.price_per_day <= search_price_max)
     if search_vehicle_type:
-        query = query.filter(Listing.category == search_vehicle_type)
+        query = query.join(category_alias, category_alias.listing_id == Listing.id) \
+            .filter(category_alias.category_name == search_vehicle_type)
 
     # Sortering
     if sort_order == "price_asc":
@@ -1188,3 +1202,4 @@ def performance():
         listing_revenue_data=listing_revenue_data,
         city_comparison=city_comparison_dict
     )
+    
