@@ -1131,75 +1131,115 @@ def deactivate_expired_listings():
 @main.route('/performance', methods=['GET'])
 def performance():
     if 'user_id' not in session:
-        flash("Log in om toegang te krijgen tot je prestaties.", "danger")
+        flash("Log in to access your performance page.", "danger")
         return redirect(url_for('main.login'))
 
     provider_id = session['user_id']
     listing_id = request.args.get('listing_id', type=int)
 
-    # Haal de geselecteerde listing op
     selected_listing = Listing.query.get_or_404(listing_id)
 
-    # Prestaties van de geselecteerde listing
+    # Bereken de prestaties van de geselecteerde listing
     listing_performance = db.session.query(
         Listing.listing_title,
         Listing.location,
         Vehicle.vehicle_type,
-        func.count(Transaction.id).label('total_bookings'),
+        func.count(Booking.booking_id).label('total_bookings'),
         func.sum(Transaction.total_price).label('total_revenue'),
-        func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating')  # Use coalesce to default to 0.0
+        
+        func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating') 
     ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
-    .join(Transaction, Transaction.listing_id == Listing.id, isouter=True) \
-    .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
-    .filter(Listing.id == listing_id) \
-    .group_by(Listing.id, Listing.location, Vehicle.vehicle_type) \
-    .first()
-
-    # Omzetgegevens ophalen per datum
+     .join(Booking, Booking.listing_id == Listing.id, isouter=True) \
+     .join(Transaction, Transaction.id == Booking.transaction_id, isouter=True) \
+     .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
+     .filter(Listing.id == listing_id) \
+     .group_by(Listing.id, Listing.location, Vehicle.vehicle_type) \
+     .first()
+    
+    # Omzetgegevens per datum (voor grafiek)
     revenue_by_date = db.session.query(
-        Transaction.start_date.label('date'),
+        Booking.start_date.label('date'),
         func.sum(Transaction.total_price).label('revenue')
-    ).filter(Transaction.listing_id == listing_id, Transaction.status == "processed") \
-     .group_by(Transaction.start_date) \
-     .order_by(Transaction.start_date) \
+    ).join(Transaction, Transaction.id == Booking.transaction_id) \
+     .filter(Booking.listing_id == listing_id, Transaction.status == "processed") \
+     .group_by(Booking.start_date) \
+     .order_by(Booking.start_date) \
      .all()
 
+    # Formatteer omzetgegevens voor Chart.js
     listing_revenue_data = [
-        {"date": row.date.strftime('%Y-%m-%d'), "revenue": row.revenue or 0.0}
+        {"date": row.date.strftime('%Y-%m-%d'), "revenue": float(row.revenue or 0)}
         for row in revenue_by_date
     ]
 
-    # Vergelijkbare listings in dezelfde stad
+    # Vergelijk met andere listings in dezelfde stad en van hetzelfde voertuigtype
     city_comparison = db.session.query(
         Listing.listing_title,
         Vehicle.vehicle_type,
-        func.count(Transaction.id).label('total_bookings'),
-        func.sum(Transaction.total_price).label('total_revenue'),
-        func.avg(UserReview.rating).label('average_rating')
+        func.count(Booking.booking_id).label('total_bookings'),
+        func.coalesce(func.sum(Transaction.total_price), 0.0).label('total_revenue'),
+        func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating')
     ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
-     .join(Transaction, Transaction.listing_id == Listing.id, isouter=True) \
+     .join(Booking, Booking.listing_id == Listing.id, isouter=True) \
+     .join(Transaction, Transaction.id == Booking.transaction_id, isouter=True) \
      .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
-     .filter(Listing.location == selected_listing.location, 
-             Listing.id != listing_id,
-             Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type) \
-     .group_by(Listing.id, Vehicle.vehicle_type) \
+     .filter(
+         Listing.location == selected_listing.location,
+         Listing.id != listing_id,
+         Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type
+     ).group_by(Listing.id, Vehicle.vehicle_type) \
      .all()
 
-    city_comparison_dict = [
-        {
-            "listing_title": row.listing_title,
-            "vehicle_type": row.vehicle_type,
-            "total_bookings": row.total_bookings or 0,
-            "total_revenue": row.total_revenue or 0.0,
-            "average_rating": row.average_rating or 0.0
-        }
-        for row in city_comparison
-    ]
+    # Bereken rangschikking op basis van omzet
+    city_rankings = db.session.query(
+        Listing.id,
+        func.coalesce(func.sum(Transaction.total_price), 0.0).label('total_revenue')
+    ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
+     .join(Booking, Booking.listing_id == Listing.id, isouter=True) \
+     .join(Transaction, Transaction.id == Booking.transaction_id, isouter=True) \
+     .filter(
+         Listing.location == selected_listing.location,
+         Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type
+     ).group_by(Listing.id) \
+     .order_by(func.coalesce(func.sum(Transaction.total_price), 0.0).desc()) \
+     .all()
+    
+    # Bepaal rang van de geselecteerde listing
+    rank = next((index + 1 for index, row in enumerate(city_rankings) if row.id == listing_id), None)
+    total_listings = len(city_rankings)
+
+    rank_display = f"{rank} out of {total_listings}"
+    if rank == 1:
+        rank_display = f"#1 (Top Performer) out of {total_listings}"
+
+    performance_analysis = {
+        "outperforming": False,
+        "suggest_price_increase": False,
+        "recommendation": "Your listing is performing as expected.",
+        "rank_display": rank_display,
+        "rank": rank,
+        "total_listings": total_listings
+    }
+
+    if listing_performance:
+        avg_revenue = sum(row.total_revenue or 0 for row in city_rankings) / max(total_listings, 1)
+        if listing_performance.total_revenue > avg_revenue:  # Presteert boven het gemiddelde
+            performance_analysis["outperforming"] = True
+            if listing_performance.total_revenue > 1.2 * avg_revenue:  # 20% beter dan gemiddelde
+                performance_analysis["suggest_price_increase"] = True
+                performance_analysis["recommendation"] = (
+                    "Your listing is outperforming similar listings. Consider increasing the price!"
+                )
+        else:
+            performance_analysis["recommendation"] = (
+                "Your listing is underperforming compared to similar listings. "
+                "Consider improving your description, lowering the price, or adding promotions."
+            )
 
     return render_template(
         'performance.html',
         listing_performance=listing_performance,
         listing_revenue_data=listing_revenue_data,
-        city_comparison=city_comparison_dict
+        city_comparison=city_comparison,
+        performance_analysis=performance_analysis
     )
-    
