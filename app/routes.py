@@ -1024,6 +1024,7 @@ def deactivate_expired_listings():
     db.session.commit()
 
 
+
 @main.route('/performance', methods=['GET'])
 def performance():
     if 'user_id' not in session:
@@ -1043,13 +1044,27 @@ def performance():
         Vehicle.vehicle_type,
         func.count(Transaction.id).label('total_bookings'),
         func.sum(Transaction.total_price).label('total_revenue'),
-        func.avg(UserReview.rating).label('average_rating')
+        func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating')  # Use coalesce to default to 0.0
     ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
-     .join(Transaction, Transaction.listing_id == Listing.id, isouter=True) \
-     .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
-     .filter(Listing.id == listing_id) \
-     .group_by(Listing.id, Listing.location, Vehicle.vehicle_type) \
-     .first()
+    .join(Transaction, Transaction.listing_id == Listing.id, isouter=True) \
+    .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
+    .filter(Listing.id == listing_id) \
+    .group_by(Listing.id, Listing.location, Vehicle.vehicle_type) \
+    .first()
+
+    # Omzetgegevens ophalen per datum
+    revenue_by_date = db.session.query(
+        Transaction.start_date.label('date'),
+        func.sum(Transaction.total_price).label('revenue')
+    ).filter(Transaction.listing_id == listing_id, Transaction.status == "processed") \
+     .group_by(Transaction.start_date) \
+     .order_by(Transaction.start_date) \
+     .all()
+
+    listing_revenue_data = [
+        {"date": row.date.strftime('%Y-%m-%d'), "revenue": row.revenue or 0.0}
+        for row in revenue_by_date
+    ]
 
     # Vergelijkbare listings in dezelfde stad
     city_comparison = db.session.query(
@@ -1067,16 +1082,6 @@ def performance():
      .group_by(Listing.id, Vehicle.vehicle_type) \
      .all()
 
-    # Data omzetten naar dictionaries
-    listing_performance_dict = {
-        "listing_title": listing_performance.listing_title,
-        "location": listing_performance.location,
-        "vehicle_type": listing_performance.vehicle_type,
-        "total_bookings": listing_performance.total_bookings or 0,
-        "total_revenue": listing_performance.total_revenue or 0.0,
-        "average_rating": listing_performance.average_rating or 0.0
-    }
-
     city_comparison_dict = [
         {
             "listing_title": row.listing_title,
@@ -1090,6 +1095,7 @@ def performance():
 
     return render_template(
         'performance.html',
-        listing_performance=listing_performance_dict,
+        listing_performance=listing_performance,
+        listing_revenue_data=listing_revenue_data,
         city_comparison=city_comparison_dict
     )

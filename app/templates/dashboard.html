@@ -151,7 +151,7 @@
                                                     {% endif %}
                                                     <a href="{{ url_for('main.view_listing', listing_id=listing.id) }}" class="btn btn-sm btn-success">View</a>
                                                     <a href="{{ url_for('main.edit_listing', listing_id=listing.id) }}" class="btn btn-sm btn-primary">Edit</a>
-                                                    <a href="{{ url_for('main.performance', listing_id=listing.id) }}" class="btn btn-sm btn-primary">Performance</a>
+                                                    <a href="{{ url_for('main.performance', listing_id=listing.id) }}" class="btn btn-sm btn-info">Performance</a>
                                                 </td>
                                             </tr>
                                         {% endfor %}
