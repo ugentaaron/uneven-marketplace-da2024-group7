@@ -100,12 +100,10 @@ class Transaction(db.Model):
     __tablename__ = 'Transaction'
 
     id = db.Column('transactionID', db.BigInteger, primary_key=True)
-    status = db.Column(db.Enum('pending', 'approved', 'rejected', 'processed', name='transaction_status'), nullable=False, default='pending')
+    status = db.Column(db.Enum('pending', 'approved', 'completed', 'rejected', 'processed', name='transaction_status'), nullable=False, default='pending')
     renter_id = db.Column('renterID', db.BigInteger, db.ForeignKey('User.userID'), nullable=False)
     listing_id = db.Column('listingID', db.BigInteger, db.ForeignKey('Listing.listingID'), nullable=False)
     created_at = db.Column('createdAt', db.DateTime, nullable=False, default=datetime.utcnow)
-    start_date = db.Column('startDate', db.Date, nullable=False)
-    end_date = db.Column('endDate', db.Date, nullable=False)
     total_price = db.Column('totalPrice', db.Float, nullable=True)
 
     renter = db.relationship('User', back_populates='transactions')
