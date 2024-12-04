@@ -1,8 +1,8 @@
 ### Marketplace Ideation
 
-Platform name: RentYourRidd
+Platform name: RentYourRide
 
-Short description: short and longterm possibility of renting vehicles (cars, bikes,...), P2P market
+Short description: short and long-term possibility of renting vehicles (cars, bikes,...), P2P market
 
 # Taxonomy: Business Model
 
