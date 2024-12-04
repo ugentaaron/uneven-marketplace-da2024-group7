@@ -5,9 +5,10 @@ from app.utils import allowed_file
 import os
 from werkzeug.utils import secure_filename
 from sqlalchemy import func
+import mimetypes
+from supabase import create_client, Client
 
 main = Blueprint('main', __name__)
-
 
 @main.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -88,9 +89,6 @@ def profile():
 
 
 # 2. Listing Management Routes
-
-
-# Add listing route
 @main.route('/add-listing', methods=['GET', 'POST'])
 def add_listing():
     if 'user_id' not in session:
@@ -169,6 +167,97 @@ def add_listing():
     categories = Category.query.all()  # Zorg ervoor dat 'categories' is gedefinieerd
     return render_template('add_listing.html', categories=categories)
 
+'''
+SUPABASE_URL = current_app.config['SUPABASE_URL']
+SUPABASE_KEY = current_app.config['SUPABASE_KEY']
+SUPABASE_BUCKET = current_app.config['SUPABASE_BUCKET']
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+# Add listing route
+@main.route('/add-listing', methods=['GET', 'POST'])
+def add_listing():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login', next=request.url))
+
+    if request.method == 'POST':
+        try:
+            # Validatie van datums
+            available_start = datetime.strptime(request.form['available_start'], '%Y-%m-%d')
+            available_end = datetime.strptime(request.form['available_end'], '%Y-%m-%d')
+            if available_end < available_start:
+                flash("The end date cannot be earlier than the start date.", "danger")
+                return redirect(request.url)
+
+            # Bestand uploaden naar Supabase
+            file = request.files.get('listing_images')
+            picture_path = None
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                mimetype = mimetypes.guess_type(filename)[0]  # Haal de MIME type op
+                file_data = file.read()
+
+                # Upload naar Supabase
+                response = supabase.storage.from_(SUPABASE_BUCKET).upload(f"listings/{filename}", file_data, {"content-type": mimetype})
+                if response.get("error"):
+                    raise Exception(response["error"]["message"])
+
+                # Verkrijg de publieke URL van de afbeelding
+                picture_path = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/listings/{filename}"
+                print(f"File uploaded to Supabase: {picture_path}")
+            else:
+                print("No valid file uploaded or file type is not allowed.")
+
+            # Nieuwe listing aanmaken
+            new_listing = Listing(
+                listing_title=request.form['listing_name'],
+                price_per_day=float(request.form['price']),
+                location=request.form['location'],
+                available_start=request.form['available_start'],
+                available_end=request.form['available_end'],
+                description=request.form['description'],
+                status=request.form.get('status', 'available'),
+                picture=picture_path,  # Gebruik de URL van Supabase
+                provider_id=session['user_id'],
+                created_at=datetime.utcnow()
+            )
+            db.session.add(new_listing)
+            db.session.flush()  # Zorg ervoor dat de listing_id beschikbaar is
+
+            # Voeg CategoryListing toe
+            category_listing = CategoryListing(
+                listing_id=new_listing.id,
+                category_name=request.form['vehicle_type']
+            )
+            db.session.add(category_listing)
+
+            # Voeg voertuigdetails toe
+            vehicle = Vehicle(
+                listing_id=new_listing.id,
+                make=request.form['make'],
+                year=int(request.form['year']),
+                vehicle_type=request.form['vehicle_type'],
+                fuel_type=request.form['fuel_type'],
+                seats=int(request.form['seats']),
+                extra_features=request.form.get('extra_features', '')
+            )
+            db.session.add(vehicle)
+
+            # Commit alle wijzigingen
+            db.session.commit()
+
+            flash("Listing added successfully!", "success")
+            return redirect(url_for('main.index'))
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error adding listing: {e}")
+            flash("An error occurred while adding the listing. Please try again.", "danger")
+            return redirect(request.url)
+
+    # GET: Toon de formulierpagina
+    categories = Category.query.all()  # Zorg ervoor dat 'categories' is gedefinieerd
+    return render_template('add_listing.html', categories=categories)
+'''
 
 # Edit listing route
 @main.route('/edit_listing/<int:listing_id>', methods=['GET', 'POST'])
