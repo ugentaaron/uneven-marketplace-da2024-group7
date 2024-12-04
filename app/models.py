@@ -69,7 +69,6 @@ class Listing(db.Model):
     vehicle = db.relationship('Vehicle', backref='listing', uselist=False)
 
     def deactivate_if_expired(self):
-        """Deactivates the listing if the end date has passed."""
         if self.available_end < datetime.utcnow().date() and self.status != "deactivated":
             self.status = "deactivated"
             db.session.commit()

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from app.utils import allowed_file
 import os
 from werkzeug.utils import secure_filename
+from sqlalchemy import func
 
 main = Blueprint('main', __name__)
 
@@ -1021,3 +1022,74 @@ def deactivate_expired_listings():
 
     # Commit the changes
     db.session.commit()
+
+
+@main.route('/performance', methods=['GET'])
+def performance():
+    if 'user_id' not in session:
+        flash("Log in om toegang te krijgen tot je prestaties.", "danger")
+        return redirect(url_for('main.login'))
+
+    provider_id = session['user_id']
+    listing_id = request.args.get('listing_id', type=int)
+
+    # Haal de geselecteerde listing op
+    selected_listing = Listing.query.get_or_404(listing_id)
+
+    # Prestaties van de geselecteerde listing
+    listing_performance = db.session.query(
+        Listing.listing_title,
+        Listing.location,
+        Vehicle.vehicle_type,
+        func.count(Transaction.id).label('total_bookings'),
+        func.sum(Transaction.total_price).label('total_revenue'),
+        func.avg(UserReview.rating).label('average_rating')
+    ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
+     .join(Transaction, Transaction.listing_id == Listing.id, isouter=True) \
+     .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
+     .filter(Listing.id == listing_id) \
+     .group_by(Listing.id, Listing.location, Vehicle.vehicle_type) \
+     .first()
+
+    # Vergelijkbare listings in dezelfde stad
+    city_comparison = db.session.query(
+        Listing.listing_title,
+        Vehicle.vehicle_type,
+        func.count(Transaction.id).label('total_bookings'),
+        func.sum(Transaction.total_price).label('total_revenue'),
+        func.avg(UserReview.rating).label('average_rating')
+    ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
+     .join(Transaction, Transaction.listing_id == Listing.id, isouter=True) \
+     .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
+     .filter(Listing.location == selected_listing.location, 
+             Listing.id != listing_id,
+             Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type) \
+     .group_by(Listing.id, Vehicle.vehicle_type) \
+     .all()
+
+    # Data omzetten naar dictionaries
+    listing_performance_dict = {
+        "listing_title": listing_performance.listing_title,
+        "location": listing_performance.location,
+        "vehicle_type": listing_performance.vehicle_type,
+        "total_bookings": listing_performance.total_bookings or 0,
+        "total_revenue": listing_performance.total_revenue or 0.0,
+        "average_rating": listing_performance.average_rating or 0.0
+    }
+
+    city_comparison_dict = [
+        {
+            "listing_title": row.listing_title,
+            "vehicle_type": row.vehicle_type,
+            "total_bookings": row.total_bookings or 0,
+            "total_revenue": row.total_revenue or 0.0,
+            "average_rating": row.average_rating or 0.0
+        }
+        for row in city_comparison
+    ]
+
+    return render_template(
+        'performance.html',
+        listing_performance=listing_performance_dict,
+        city_comparison=city_comparison_dict
+    )
