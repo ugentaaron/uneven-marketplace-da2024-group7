@@ -434,7 +434,7 @@ def view_listing(listing_id):
     bookings = Booking.query.filter_by(listing_id=listing.id).filter(Booking.status.in_(["pending", "approved"])).all()
 
     is_owner = 'user_id' in session and session['user_id'] == listing.provider_id
-
+    
     unavailable_dates = []
     for booking in bookings:
         current_date = booking.start_date
@@ -453,7 +453,7 @@ def view_listing(listing_id):
 
     if request.method == 'POST':
         if 'user_id' not in session:
-            flash("Please log in to make a purchase.", "danger")
+            flash("Please log in to rent a vehicle.", "danger")
             return redirect(url_for('main.login'))
 
         action = request.form.get('action', '').strip()
@@ -510,10 +510,12 @@ def view_listing(listing_id):
         db.session.add(new_booking)
         db.session.commit()
 
+        current_user = User.query.get(session['user_id'])
+
         # Add notification for provider
         add_notification(
             receiver_id=listing.provider_id,
-            message=f"New rental request received from {User.username} for '{listing.listing_title}' "
+            message=f"New rental request received from {current_user.username} for '{listing.listing_title}' "
                     f"from {start_date} to {end_date}. Total amount: €{total_price:.2f}."
         )
 
