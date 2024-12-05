@@ -806,32 +806,47 @@ def booking_details(booking_id):
     booking = Booking.query.get_or_404(booking_id)
     listing = booking.listing
     provider = User.query.get(listing.provider_id)
+    renter = User.query.get(booking.renter_id)  # Informatie over de huurder ophalen
     current_user_id = session.get('user_id')
 
     is_renter = booking.renter_id == current_user_id
     is_provider = listing.provider_id == current_user_id
 
-    # Check if a review can be made
-    existing_review = UserReview.query.filter_by(
+    # Check if a review can be made by the renter
+    existing_renter_review = UserReview.query.filter_by(
         reviewer_id=current_user_id,
         listing_id=listing.id
     ).first() if is_renter else None
 
-    can_review = (
+    can_renter_review = (
         is_renter
         and booking.status == "approved"
         and datetime.utcnow().date() > booking.end_date
-        and not existing_review
+        and not existing_renter_review
+    )
+
+    # Check if a review can be made by the provider
+    existing_provider_review = UserReview.query.filter_by(
+        reviewer_id=current_user_id,
+        listing_id=listing.id
+    ).first() if is_provider else None
+
+    can_provider_review = (
+        is_provider
+        and booking.status == "approved"
+        and datetime.utcnow().date() > booking.end_date
+        and not existing_provider_review
     )
 
     if request.method == 'POST':
         action = request.form.get('action')
 
-        if action == "submit_review" and can_review:
+        # Renter submits a review
+        if action == "submit_renter_review" and can_renter_review:
             rating = int(request.form.get('rating'))
             comment = request.form.get('comment', '').strip()
 
-            # Create and save the new review
+            # Create and save the new review for the provider
             new_review = UserReview(
                 reviewer_id=current_user_id,
                 reviewed_id=listing.provider_id,
@@ -842,9 +857,29 @@ def booking_details(booking_id):
             )
             db.session.add(new_review)
             db.session.commit()
-            flash("Review submitted successfully!", "success")
+            flash("Review for the provider submitted successfully!", "success")
             return redirect(url_for('main.booking_details', booking_id=booking_id))
 
+        # Provider submits a review
+        if action == "submit_provider_review" and can_provider_review:
+            rating = int(request.form.get('rating'))
+            comment = request.form.get('comment', '').strip()
+
+            # Create and save the new review for the renter
+            new_review = UserReview(
+                reviewer_id=current_user_id,
+                reviewed_id=booking.renter_id,
+                listing_id=listing.id,
+                rating=rating,
+                comment=comment,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(new_review)
+            db.session.commit()
+            flash("Review for the renter submitted successfully!", "success")
+            return redirect(url_for('main.booking_details', booking_id=booking_id))
+
+    # Calculate the average review score for the provider
     average_review_score = None
     if provider.received_feedback:
         reviews = [review.rating for review in provider.received_feedback]
@@ -855,12 +890,16 @@ def booking_details(booking_id):
         booking=booking,
         listing=listing,
         provider=provider,
+        renter=renter,  # Doorsturen naar de template
         is_renter=is_renter,
         is_provider=is_provider,
-        can_review=can_review,
-        existing_review=existing_review,
+        can_renter_review=can_renter_review,
+        can_provider_review=can_provider_review,
+        existing_renter_review=existing_renter_review,
+        existing_provider_review=existing_provider_review,
         average_review_score=average_review_score
     )
+
 
 # 4. Transaction Routes
 

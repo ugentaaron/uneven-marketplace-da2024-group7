@@ -186,7 +186,15 @@
                                                 <td>{{ booking.booking_id }}</td>
                                                 <td>{{ booking.listing.listing_title }}</td>
                                                 <td>{{ booking.renter.username }}</td>
-                                                <td>{{ booking.status }}</td>
+                                                <td>{% if booking.status == "pending" %}
+                                                        <span class="text-warning fw-bold">Pending</span>
+                                                    {% elif booking.status == "approved" %}
+                                                        <span class="text-success fw-bold">Approved</span>
+                                                    {% elif booking.status == "cancelled" %}
+                                                        <span class="text-danger fw-bold">Cancelled</span>
+                                                    {% else %}
+                                                        {{ booking.status }}
+                                                    {% endif %}</td>
                                                 <td>{{ booking.start_date }} to {{ booking.end_date }}</td>
                                                 <td class="d-flex gap-1">
                                                     <a href="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}" 
