@@ -19,7 +19,7 @@
                 <p><strong>Location:</strong> {{ listing_performance.location }}</p>
                 <p><strong>Vehicle Type:</strong> {{ listing_performance.vehicle_type }}</p>
                 <p><strong>Total Bookings:</strong> {{ listing_performance.total_bookings }}</p>
-                <p><strong>Total Revenue:</strong> €{{ "%.2f"|format(listing_performance.total_revenue) }}</p>
+                <p><strong>Total Revenue:</strong> €{{ "%.2f"|format(listing_performance.total_revenue or 0) }}</p>
                 <p><strong>Average Rating:</strong> 
                     {% if listing_performance.average_rating is not none %}
                         {{ "%.1f"|format(listing_performance.average_rating) }} / 5

@@ -1223,7 +1223,7 @@ def performance():
 
     if listing_performance:
         avg_revenue = sum(row.total_revenue or 0 for row in city_rankings) / max(total_listings, 1)
-        if listing_performance.total_revenue > avg_revenue:  # Presteert boven het gemiddelde
+        if (listing_performance.total_revenue or 0) > avg_revenue:  # Presteert boven het gemiddelde
             performance_analysis["outperforming"] = True
             if listing_performance.total_revenue > 1.2 * avg_revenue:  # 20% beter dan gemiddelde
                 performance_analysis["suggest_price_increase"] = True
