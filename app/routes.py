@@ -267,57 +267,63 @@ def edit_listing(listing_id):
     vehicle = Vehicle.query.filter_by(listing_id=listing.id).first()
 
     if request.method == 'POST':
-        listing.listing_title = request.form['listing_name']
-        listing.price_per_day = request.form['price']
-        listing.location = request.form['location']
-        listing.available_start = request.form['available_start']
-        listing.available_end = request.form['available_end']
-        listing.description = request.form['description']
-        listing.status = request.form['status']
-
-        vehicle.make = request.form['make']
-        vehicle.year = request.form['year']
-        vehicle.vehicle_type = request.form['vehicle_type']
-        vehicle.fuel_type = request.form['fuel_type']
-        vehicle.seats = request.form['seats']
-        vehicle.extra_features = request.form['extra_features']
-
-        # Update images if any are uploaded
-        if 'listing_images' in request.files:
-            try:
-                # Validatie van datums
-                available_start = datetime.strptime(request.form['available_start'], '%Y-%m-%d')
-                available_end = datetime.strptime(request.form['available_end'], '%Y-%m-%d')
-                if available_end < available_start:
-                    flash("The end date cannot be earlier than the start date.", "danger")
-                    return redirect(request.url)
-
-                # Bestand uploaden (optioneel)
-                file = request.files.get('listing_images')
-                picture_path = None
-                if file and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    upload_folder = current_app.config['UPLOAD_FOLDER']
-                    os.makedirs(upload_folder, exist_ok=True)
-                    file_path = os.path.join(upload_folder, filename)
-                    file.save(file_path)
-                    picture_path = os.path.join('uploads', filename)
-                    print(f"File uploaded successfully: {picture_path}")
-                else:
-                    print("No valid file uploaded or file type is not allowed.")
-
-            except Exception as e:
-                db.session.rollback()
-                print(f"Error adding listing: {e}")
-                flash("An error occurred while adding the listing. Please try again.", "danger")
+        try:
+            # Validatie van datums
+            available_start = datetime.strptime(request.form['available_start'], '%Y-%m-%d')
+            available_end = datetime.strptime(request.form['available_end'], '%Y-%m-%d')
+            if available_end < available_start:
+                flash("The end date cannot be earlier than the start date.", "danger")
                 return redirect(request.url)
 
-        db.session.commit()
-        return redirect(url_for('main.edit_listing', listing_id=listing.id))
+            # Update listing gegevens
+            listing.listing_title = request.form['listing_name']
+            listing.price_per_day = float(request.form['price'])
+            listing.location = request.form['location']
+            listing.available_start = available_start
+            listing.available_end = available_end
+            listing.description = request.form['description']
+            listing.status = request.form['status']
+
+            # Update voertuiggegevens
+            vehicle.make = request.form['make']
+            vehicle.year = int(request.form['year'])
+            vehicle.vehicle_type = request.form['vehicle_type']
+            vehicle.fuel_type = request.form['fuel_type']
+            vehicle.seats = int(request.form['seats'])
+            vehicle.extra_features = request.form['extra_features']
+
+            # Verwerk nieuwe afbeelding (indien geüpload)
+            file = request.files.get('listing_images')
+            if file and allowed_file(file.filename):
+                # Upload nieuwe afbeelding
+                filename = secure_filename(file.filename)
+                upload_folder = current_app.config['UPLOAD_FOLDER']
+                os.makedirs(upload_folder, exist_ok=True)
+                file_path = os.path.join(upload_folder, filename)
+                file.save(file_path)
+                picture_path = os.path.join('uploads', filename)
+
+                # Verwijder oude afbeelding als die bestaat (optioneel)
+                if listing.picture and os.path.exists(os.path.join(current_app.root_path, listing.picture)):
+                    os.remove(os.path.join(current_app.root_path, listing.picture))
+                
+                # Update de afbeelding in de database
+                listing.picture = picture_path
+                print(f"Updated image path: {picture_path}")
+
+            # Sla wijzigingen op
+            db.session.commit()
+            flash("Listing updated successfully!", "success")
+            return redirect(url_for('main.edit_listing', listing_id=listing.id))
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error updating listing: {e}")
+            flash("An error occurred while updating the listing. Please try again.", "danger")
+            return redirect(request.url)
 
     categories = Category.query.all()
     return render_template('edit_listing.html', listing=listing, vehicle=vehicle, categories=categories)
-
 
 # Delete listing route
 @main.route('/delete-listing/<int:listing_id>', methods=['POST'])
