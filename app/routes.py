@@ -593,7 +593,7 @@ def index():
     categories = Category.query.all()
     total_users = User.query.count()
     total_listings = Listing.query.count()
-    rented_listings = Listing.query.filter_by(status='rented').count()
+    rented_listings = Booking.query.filter_by(status='approved').count()
     total_transactions = Transaction.query.count()
     notifications_unread_count = 0
 
