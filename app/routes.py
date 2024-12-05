@@ -813,7 +813,7 @@ def booking_details(booking_id):
 
     can_review = (
         is_renter
-        and booking.status == "confirmed"
+        and booking.status == "approved"
         and datetime.utcnow().date() > booking.end_date
         and not existing_review
     )
@@ -861,7 +861,7 @@ def booking_details(booking_id):
 def is_vehicle_available(listing_id, start_date, end_date):
     overlapping_bookings = Booking.query.filter(
         Booking.listing_id == listing_id,
-        Booking.status == 'confirmed',
+        Booking.status == 'approved',
         db.or_(
             db.and_(Booking.start_date <= start_date, Booking.end_date >= start_date),
             db.and_(Booking.start_date <= end_date, Booking.end_date >= end_date),
@@ -899,7 +899,7 @@ def transaction_details(transaction_id):
         # Verwerk de transactie
         if action == "process_transaction" and is_renter and transaction.status == "pending":
             transaction.status = "processed"
-            booking.status = "confirmed"  
+            booking.status = "approved"  
             db.session.commit()
 
             # Voeg meldingen toe

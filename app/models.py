@@ -159,7 +159,7 @@ class Booking(db.Model):
     transaction_id = db.Column('transactionID', db.BigInteger, db.ForeignKey('Transaction.transactionID'), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(50), default='confirmed', nullable=False)
+    status = db.Column(db.Enum('pending', 'cancelled', 'approved', name='transaction_status'), nullable=False, default='pending')
     created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
