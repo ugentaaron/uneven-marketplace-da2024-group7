@@ -420,13 +420,12 @@ def activate_listing(listing_id):
     return redirect(url_for('main.dashboard'))
 
 
-
 @main.route('/listing/<int:listing_id>', methods=['GET', 'POST'])
 def view_listing(listing_id):
     listing = Listing.query.get_or_404(listing_id)
     vehicle = Vehicle.query.filter_by(listing_id=listing.id).first()
     provider = User.query.get(listing.provider_id)
-    bookings = Booking.query.filter_by(listing_id=listing.id).all()
+    bookings = Booking.query.filter_by(listing_id=listing.id).filter(Booking.status.in_(["pending", "approved"])).all()
 
     is_owner = 'user_id' in session and session['user_id'] == listing.provider_id
 
@@ -872,6 +871,7 @@ def is_vehicle_available(listing_id, start_date, end_date):
 
     return len(overlapping_bookings) == 0
 
+
 # Transaction details route
 @main.route('/transaction/<int:transaction_id>', methods=['GET', 'POST'])
 def transaction_details(transaction_id):
@@ -880,48 +880,64 @@ def transaction_details(transaction_id):
     provider = User.query.get(listing.provider_id)
     current_user_id = session.get('user_id')
 
-    # Check if current user is renter or provider
+    # Controleer of de huidige gebruiker de huurder of aanbieder is
     is_renter = transaction.renter_id == current_user_id
     is_provider = listing.provider_id == current_user_id
 
-    # Get the booking related to the transaction (since start_date and end_date are now in Booking)
+    # Haal de bijbehorende boeking op
     booking = Booking.query.filter_by(transaction_id=transaction.id).first()
 
-    # If booking does not exist, handle it gracefully (e.g., display an error or redirect)
+    # Als er geen boeking is, toon een foutmelding
     if not booking:
-        flash("Booking not found for this transaction.", "danger")
+        flash("Boeking niet gevonden voor deze transactie.", "danger")
         return redirect(url_for('main.index'))
 
+    # Verwerk een POST-aanvraag
     if request.method == 'POST':
-        action = request.form.get('action')
+        action = request.form.get('action', '').strip()
 
-        # Handle transaction status change to "processed"
+        # Verwerk de transactie
         if action == "process_transaction" and is_renter and transaction.status == "pending":
-            # Update transaction status
             transaction.status = "processed"
+            booking.status = "confirmed"  
             db.session.commit()
 
-            if transaction.renter_id != session['user_id']:
-                flash("You are not authorized to process this payment.", "danger")
-                return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
-
-            # Add notification for the renter
+            # Voeg meldingen toe
             add_notification(
                 receiver_id=transaction.renter_id,
-                message=f"Your payment for '{transaction.listing.listing_title}' from {booking.start_date} to {booking.end_date} "
-                        f"has been successfully processed. The total amount is €{transaction.total_price:.2f}. View your booking "
-                        f"<a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>here</a>."
+                message=f"Je betaling voor '{transaction.listing.listing_title}' van {booking.start_date} "
+                        f"tot {booking.end_date} is succesvol verwerkt. Het totale bedrag is €{transaction.total_price:.2f}. "
+                        f"Bekijk je boeking <a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>hier</a>."
             )
-
-            # Add notification for the provider
             add_notification(
-                receiver_id=transaction.listing.provider_id,
-                message=f"The payment for the rental request of '{transaction.listing.listing_title}' from {booking.start_date} "
-                        f"to {booking.end_date} has been completed. The total amount is €{transaction.total_price:.2f}. Check the booking "
-                        f"<a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>here</a>."
+                receiver_id=listing.provider_id,
+                message=f"De betaling voor de verhuur van '{transaction.listing.listing_title}' van {booking.start_date} "
+                        f"tot {booking.end_date} is voltooid. Het totale bedrag is €{transaction.total_price:.2f}. "
+                        f"Bekijk de boeking <a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>hier</a>."
             )
 
-            flash("Payment processed successfully! The transaction is now marked as processed.", "success")
+            flash("Betaling succesvol verwerkt en boeking goedgekeurd!", "success")
+            return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
+
+        # Annuleer de transactie
+        elif action == "cancel_transaction" and is_renter and transaction.status == "pending":
+            transaction.status = "cancelled"
+            booking.status = "cancelled"  # Werk de boeking bij naar 'cancelled'
+            db.session.commit()
+
+            # Voeg meldingen toe
+            add_notification(
+                receiver_id=transaction.renter_id,
+                message=f"Je boeking voor '{transaction.listing.listing_title}' van {booking.start_date} "
+                        f"tot {booking.end_date} is geannuleerd. De transactie is beëindigd."
+            )
+            add_notification(
+                receiver_id=listing.provider_id,
+                message=f"De huurder heeft de boeking voor '{transaction.listing.listing_title}' van {booking.start_date} "
+                        f"tot {booking.end_date} geannuleerd. De transactie is beëindigd."
+            )
+
+            flash("De transactie en bijbehorende boeking zijn geannuleerd.", "info")
             return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
 
     return render_template(
@@ -931,10 +947,8 @@ def transaction_details(transaction_id):
         provider=provider,
         is_renter=is_renter,
         is_provider=is_provider,
-        booking=booking  # Pass booking object to template
+        booking=booking
     )
-
-
 
 
 # 5. Review Routes

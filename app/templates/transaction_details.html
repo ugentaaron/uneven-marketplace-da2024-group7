@@ -20,16 +20,21 @@
         </p>
         <p><strong>Listing Title:</strong> {{ transaction.listing.listing_title }}</p>
         <p><strong>Price:</strong> €{{ "%.2f"|format(transaction.listing.price_per_day) }}</p>
-        <p><strong>Start Date:</strong> {{ transaction.start_date }}</p>
-        <p><strong>End Date:</strong> {{ transaction.end_date }}</p>
+        <p><strong>Start Date:</strong> {{ booking.start_date }}</p>
+        <p><strong>End Date:</strong> {{ booking.end_date }}</p>
         <p><strong>Total Price:</strong> €{{ "%.2f"|format(transaction.total_price) }}</p>
         <p><strong>Created At:</strong> {{ transaction.created_at }}</p>
 
-        <!-- Process Transaction Button (Visible only for the renter) -->
+        <!-- Action Buttons -->
         {% if is_renter and transaction.status == "pending" %}
         <form method="POST">
             <input type="hidden" name="action" value="process_transaction">
             <button type="submit" class="btn btn-success">Process Transaction</button>
+        </form>
+        <br>
+        <form method="POST">
+            <input type="hidden" name="action" value="cancel_transaction">
+            <button type="submit" class="btn btn-danger">Cancel Transaction</button>
         </form>
         {% endif %}
 

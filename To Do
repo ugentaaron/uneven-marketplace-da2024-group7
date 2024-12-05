@@ -6,7 +6,8 @@ maar nieuwe zoekertjes worden er wel in geplaatst dus wanneer we database opnieu
 DONE - Alle notificaties in het Engels
 DONE - end_date kan voor start_date liggen, hier moet een error komen wanneer iemand dit probeert
 - Booking systeem nog is bekijken, zolang transactie op pending staat kan iedereen voor dezelfde periode nog steeds huren, en daarna kan diegene waar het op pending stond ook nog is huren dus dubbele booking
-- booking kunnen annuleren
+DONE - booking kunnen annuleren
+- rented status overbodig
 DONE - Zoekertjes waar de end-date overschreden is moeten op deactivated komen staan
 - Zoekertjes die over de volledige periode verhuurd zijn staan nog steeds op active
 DONE - Edit listing pagina moet nog worden uitgebreid
