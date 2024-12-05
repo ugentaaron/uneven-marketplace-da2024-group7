@@ -918,8 +918,6 @@ def is_vehicle_available(listing_id, start_date, end_date):
 
     return len(overlapping_bookings) == 0
 
-
-# Transaction details route
 @main.route('/transaction/<int:transaction_id>', methods=['GET', 'POST'])
 def transaction_details(transaction_id):
     transaction = Transaction.query.get_or_404(transaction_id)
@@ -930,6 +928,10 @@ def transaction_details(transaction_id):
     # Controleer of de huidige gebruiker de huurder of aanbieder is
     is_renter = transaction.renter_id == current_user_id
     is_provider = listing.provider_id == current_user_id
+
+    # Bereken de service fee (10% van de totale prijs)
+    service_fee = round(transaction.total_price * 0.10, 2)
+    total_with_fee = round(transaction.total_price + service_fee, 2)
 
     # Haal de bijbehorende boeking op
     booking = Booking.query.filter_by(transaction_id=transaction.id).first()
@@ -953,7 +955,8 @@ def transaction_details(transaction_id):
             add_notification(
                 receiver_id=transaction.renter_id,
                 message=f"Je betaling voor '{transaction.listing.listing_title}' van {booking.start_date} "
-                        f"tot {booking.end_date} is succesvol verwerkt. Het totale bedrag is €{transaction.total_price:.2f}. "
+                        f"tot {booking.end_date} is succesvol verwerkt. Het totale bedrag is €{transaction.total_price:.2f}, "
+                        f"plus een service fee van €{service_fee:.2f} (totaal €{total_with_fee:.2f}). "
                         f"Bekijk je boeking <a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>hier</a>."
             )
             add_notification(
@@ -994,8 +997,11 @@ def transaction_details(transaction_id):
         provider=provider,
         is_renter=is_renter,
         is_provider=is_provider,
-        booking=booking
+        booking=booking,
+        service_fee=service_fee,
+        total_with_fee=total_with_fee
     )
+
 
 
 # 5. Review Routes
