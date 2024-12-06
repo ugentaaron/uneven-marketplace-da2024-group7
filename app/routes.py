@@ -1,13 +1,16 @@
-from flask import Blueprint, session, request, redirect, url_for, render_template, flash, current_app, send_from_directory
-from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle, Booking
 from datetime import datetime, timedelta
-from app.utils import allowed_file
 import os
+import uuid
+
+from flask import Blueprint, session, request, redirect, url_for, render_template, flash, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from sqlalchemy import func
 from sqlalchemy.orm import aliased
-import mimetypes
+
+from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle, Booking
+from app.utils import allowed_file
 from supabase import create_client, Client
+
 
 main = Blueprint('main', __name__)
 
@@ -35,7 +38,6 @@ def register():
             return redirect(url_for('main.index'))
         flash("Username already registered", "danger")
     return render_template('register.html')
-
 
 
 # Login route
@@ -90,92 +92,12 @@ def profile():
 
 
 # 2. Listing Management Routes
-@main.route('/add-listing', methods=['GET', 'POST'])
-def add_listing():
-    if 'user_id' not in session:
-        return redirect(url_for('main.login', next=request.url))
 
-    if request.method == 'POST':
-        try:
-            # Validatie van datums
-            available_start = datetime.strptime(request.form['available_start'], '%Y-%m-%d')
-            available_end = datetime.strptime(request.form['available_end'], '%Y-%m-%d')
-            if available_end < available_start:
-                flash("The end date cannot be earlier than the start date.", "danger")
-                return redirect(request.url)
-
-            # Bestand uploaden (optioneel)
-            file = request.files.get('listing_images')
-            picture_path = None
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                upload_folder = current_app.config['UPLOAD_FOLDER']
-                os.makedirs(upload_folder, exist_ok=True)
-                file_path = os.path.join(upload_folder, filename)
-                file.save(file_path)
-                picture_path = os.path.join('uploads', filename)
-                print(f"File uploaded successfully: {picture_path}")
-            else:
-                print("No valid file uploaded or file type is not allowed.")
-
-            # Nieuwe listing aanmaken
-            new_listing = Listing(
-                listing_title=request.form['listing_name'],
-                price_per_day=float(request.form['price']),
-                location=request.form['location'],
-                available_start=request.form['available_start'],
-                available_end=request.form['available_end'],
-                description=request.form['description'],
-                status=request.form.get('status', 'available'),
-                picture=picture_path,
-                provider_id=session['user_id'],
-                created_at=datetime.utcnow()
-            )
-            db.session.add(new_listing)
-            db.session.flush()  # Zorg ervoor dat de listing_id beschikbaar is
-
-            # Voeg CategoryListing toe
-            category_listing = CategoryListing(
-                listing_id=new_listing.id,
-                category_name=request.form['vehicle_type']
-            )
-            db.session.add(category_listing)
-
-            # Voeg voertuigdetails toe
-            vehicle = Vehicle(
-                listing_id=new_listing.id,
-                make=request.form['make'],
-                year=int(request.form['year']),
-                vehicle_type=request.form['vehicle_type'],
-                fuel_type=request.form['fuel_type'],
-                seats=int(request.form['seats']),
-                extra_features=request.form.get('extra_features', '')
-            )
-            db.session.add(vehicle)
-
-            # Commit alle wijzigingen
-            db.session.commit()
-
-            flash("Listing added successfully!", "success")
-            return redirect(url_for('main.index'))
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error adding listing: {e}")
-            flash("An error occurred while adding the listing. Please try again.", "danger")
-            return redirect(request.url)
-
-    # GET: Toon de formulierpagina
-    categories = Category.query.all()  # Zorg ervoor dat 'categories' is gedefinieerd
-    return render_template('add_listing.html', categories=categories)
-
-'''
-SUPABASE_URL = current_app.config['SUPABASE_URL']
-SUPABASE_KEY = current_app.config['SUPABASE_KEY']
-SUPABASE_BUCKET = current_app.config['SUPABASE_BUCKET']
+SUPABASE_URL = "https://dqmrenandyxqtmhkvfyu.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxbXJlbmFuZHl4cXRtaGt2Znl1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMDg4NzUwNywiZXhwIjoyMDQ2NDYzNTA3fQ.6OwMdLFnNaBbYAPwgk24XbKu81XqKepXO4f-e6FaVKQ"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-# Add listing route
 @main.route('/add-listing', methods=['GET', 'POST'])
 def add_listing():
     if 'user_id' not in session:
@@ -190,26 +112,33 @@ def add_listing():
                 flash("The end date cannot be earlier than the start date.", "danger")
                 return redirect(request.url)
 
-            # Bestand uploaden naar Supabase
+            # Bestand uploaden naar Supabase Storage
             file = request.files.get('listing_images')
             picture_path = None
             if file and allowed_file(file.filename):
+                # Genereer een unieke bestandsnaam met UUID en originele extensie
                 filename = secure_filename(file.filename)
-                mimetype = mimetypes.guess_type(filename)[0]  # Haal de MIME type op
-                file_data = file.read()
+                file_extension = filename.split('.')[-1]
+                unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+                bucket_name = "vehicle_photos"
+                file_path = f"uploads/{unique_filename}"
 
-                # Upload naar Supabase
-                response = supabase.storage.from_(SUPABASE_BUCKET).upload(f"listings/{filename}", file_data, {"content-type": mimetype})
-                if response.get("error"):
-                    raise Exception(response["error"]["message"])
+                try:
+                    # Lees het bestand in bytes
+                    file_bytes = file.read()  # Lees de inhoud van het bestand als bytes
+                    # Upload de bytes naar Supabase
+                    upload_response = supabase.storage.from_(bucket_name).upload(file_path, file_bytes)
 
-                # Verkrijg de publieke URL van de afbeelding
-                picture_path = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/listings/{filename}"
-                print(f"File uploaded to Supabase: {picture_path}")
+                    # Verkrijg de publieke URL van het bestand
+                    picture_path = supabase.storage.from_(bucket_name).get_public_url(file_path)
+                except Exception as e:
+                    flash(f"Failed to upload image: {e}", "danger")
+                    return redirect(request.url)
             else:
-                print("No valid file uploaded or file type is not allowed.")
+                flash("No valid file uploaded or file type is not allowed.", "danger")
+                return redirect(request.url)
 
-            # Nieuwe listing aanmaken
+            # Nieuwe listing aanmaken in Supabase
             new_listing = Listing(
                 listing_title=request.form['listing_name'],
                 price_per_day=float(request.form['price']),
@@ -223,7 +152,7 @@ def add_listing():
                 created_at=datetime.utcnow()
             )
             db.session.add(new_listing)
-            db.session.flush()  # Zorg ervoor dat de listing_id beschikbaar is
+            db.session.commit()
 
             # Voeg CategoryListing toe
             category_listing = CategoryListing(
@@ -231,6 +160,7 @@ def add_listing():
                 category_name=request.form['vehicle_type']
             )
             db.session.add(category_listing)
+            db.session.commit()
 
             # Voeg voertuigdetails toe
             vehicle = Vehicle(
@@ -243,22 +173,19 @@ def add_listing():
                 extra_features=request.form.get('extra_features', '')
             )
             db.session.add(vehicle)
-
-            # Commit alle wijzigingen
             db.session.commit()
 
             flash("Listing added successfully!", "success")
             return redirect(url_for('main.index'))
+
         except Exception as e:
-            db.session.rollback()
             print(f"Error adding listing: {e}")
-            flash("An error occurred while adding the listing. Please try again.", "danger")
+            flash(f"An error occurred while adding the listing: {e}", "danger")
             return redirect(request.url)
 
-    # GET: Toon de formulierpagina
-    categories = Category.query.all()  # Zorg ervoor dat 'categories' is gedefinieerd
+    categories = Category.query.all()
     return render_template('add_listing.html', categories=categories)
-'''
+
 
 # Edit listing route
 @main.route('/edit_listing/<int:listing_id>', methods=['GET', 'POST'])
@@ -295,35 +222,43 @@ def edit_listing(listing_id):
             # Verwerk nieuwe afbeelding (indien geüpload)
             file = request.files.get('listing_images')
             if file and allowed_file(file.filename):
-                # Upload nieuwe afbeelding
+                # Genereer een unieke bestandsnaam met UUID en originele extensie
                 filename = secure_filename(file.filename)
-                upload_folder = current_app.config['UPLOAD_FOLDER']
-                os.makedirs(upload_folder, exist_ok=True)
-                file_path = os.path.join(upload_folder, filename)
-                file.save(file_path)
-                picture_path = os.path.join('uploads', filename)
+                file_extension = filename.split('.')[-1]
+                unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+                bucket_name = "vehicle_photos"
+                file_path = f"uploads/{unique_filename}"
 
-                # Verwijder oude afbeelding als die bestaat (optioneel)
-                if listing.picture and os.path.exists(os.path.join(current_app.root_path, listing.picture)):
-                    os.remove(os.path.join(current_app.root_path, listing.picture))
-                
-                # Update de afbeelding in de database
-                listing.picture = picture_path
-                print(f"Updated image path: {picture_path}")
+                try:
+                    # Lees het bestand in bytes
+                    file_bytes = file.read()  # Lees de inhoud van het bestand als bytes
+                    # Upload de bytes naar Supabase
+                    upload_response = supabase.storage.from_(bucket_name).upload(file_path, file_bytes)
 
-            # Sla wijzigingen op
+                    # Verkrijg de publieke URL van het bestand
+                    picture_path = supabase.storage.from_(bucket_name).get_public_url(file_path)
+
+                    # Update de afbeelding in de database
+                    listing.picture = picture_path
+                except Exception as e:
+                    flash(f"Failed to upload image: {e}", "danger")
+                    return redirect(request.url)
+
+            # Sla wijzigingen op in de database
             db.session.commit()
+
             flash("Listing updated successfully!", "success")
             return redirect(url_for('main.edit_listing', listing_id=listing.id))
 
         except Exception as e:
             db.session.rollback()
             print(f"Error updating listing: {e}")
-            flash("An error occurred while updating the listing. Please try again.", "danger")
+            flash(f"An error occurred while updating the listing: {e}", "danger")
             return redirect(request.url)
 
     categories = Category.query.all()
     return render_template('edit_listing.html', listing=listing, vehicle=vehicle, categories=categories)
+
 
 # Delete listing route
 @main.route('/delete-listing/<int:listing_id>', methods=['POST'])

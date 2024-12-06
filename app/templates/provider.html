@@ -56,9 +56,9 @@
                         {% for listing in listings %}
                             <div class="col">
                                 <div class="card shadow-sm h-100">
-                                    <img src="{{ url_for('static', filename='../' + listing.picture) if listing.picture else '../uploads/default.jpg' }}"
-                                         class="card-img-top"
-                                         alt="Image of {{ listing.listing_title }}">
+                                    <img src="{{ listing.picture if listing.picture else '/uploads/default.jpg' }}"
+                                        alt="Image of {{ listing.listing_title }}"
+                                        class="img-fluid rounded">
                                     <div class="card-body">
                                         <h5 class="card-title">{{ listing.listing_title }}</h5>
                                         <p class="card-text">

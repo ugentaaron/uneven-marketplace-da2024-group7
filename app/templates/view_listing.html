@@ -36,8 +36,8 @@
             <div class="col-md-6">
                 <!-- Image -->
                 <div class="mb-4">
-                    <img src="{{ url_for('static', filename='../' + listing.picture) if listing.picture else '../uploads/default.jpg' }}"
-                        alt="Image of {{ listing.listing_title }}" 
+                    <img src="{{ listing.picture if listing.picture else '/uploads/default.jpg' }}"
+                        alt="Image of {{ listing.listing_title }}"
                         class="img-fluid rounded">
                 </div>
 
