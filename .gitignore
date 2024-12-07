@@ -18,3 +18,4 @@ migrations/
 # IDE-specifieke bestanden
 .vscode/
 .idea/
+.DS_Store
