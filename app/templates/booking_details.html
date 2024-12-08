@@ -65,7 +65,9 @@
         <div class="card mt-4">
             <div class="card-body">
                 <h5 class="card-title">Provider Information</h5>
-                <p><strong>Username:</strong> {{ provider.username }}</p>
+                <p><strong>Username:</strong> <a href="{{ url_for('main.view_provider', provider_id=provider.id) }}">
+                    {{ provider.username }}
+                </a></p>
                 <p><strong>Email:</strong> {{ provider.email }}</p>
                 <p><strong>Phone:</strong> {{ provider.phone_number }}</p>
                 <p><strong>Address:</strong> {{ provider.address }}</p>

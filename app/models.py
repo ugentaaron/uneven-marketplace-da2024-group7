@@ -59,7 +59,7 @@ class Listing(db.Model):
     location = db.Column(db.Text, nullable=False)
     available_start = db.Column('availableStart', db.Date, nullable=False)
     available_end = db.Column('availableEnd', db.Date, nullable=False)
-    price_per_day = db.Column('pricePerDay', db.Float, nullable=True)
+    price_per_day = db.Column('pricePerDay', db.Numeric(10, 2), nullable=True)
     created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow, nullable=False)
 
     provider = db.relationship('User', back_populates='listings')

@@ -552,7 +552,7 @@ def index():
            notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()
            notifications_unread_count = len(notifications)
         else:
-            app.logger.warning(f"Geen gebruiker gevonden met user_id {session['user_id']}")
+            main.logger.warning(f"No user found with user_id {session['user_id']}")
 
     
 
@@ -882,7 +882,7 @@ def transaction_details(transaction_id):
 
     # Als er geen boeking is, toon een foutmelding
     if not booking:
-        flash("Boeking niet gevonden voor deze transactie.", "danger")
+        flash("Booking not found for this transaction.", "danger")
         return redirect(url_for('main.index'))
 
     # Verwerk een POST-aanvraag
@@ -898,19 +898,19 @@ def transaction_details(transaction_id):
             # Voeg meldingen toe
             add_notification(
                 receiver_id=transaction.renter_id,
-                message=f"Je betaling voor '{transaction.listing.listing_title}' van {booking.start_date} "
-                        f"tot {booking.end_date} is succesvol verwerkt. Het totale bedrag is €{transaction.total_price:.2f}, "
-                        f"plus een service fee van €{service_fee:.2f} (totaal €{total_with_fee:.2f}). "
-                        f"Bekijk je boeking <a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>hier</a>."
+                message=f"Your payment for '{transaction.listing.listing_title}' from {booking.start_date} to "
+                        f"{booking.end_date} has been successfully processed. The total amount is €"
+                        f"{transaction.total_price:.2f}, plus a service fee of €{service_fee:.2f} (total €{total_with_fee:.2f})."
+                        f"View your booking <a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>here</a>."
             )
             add_notification(
                 receiver_id=listing.provider_id,
-                message=f"De betaling voor de verhuur van '{transaction.listing.listing_title}' van {booking.start_date} "
-                        f"tot {booking.end_date} is voltooid. Het totale bedrag is €{transaction.total_price:.2f}. "
-                        f"Bekijk de boeking <a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>hier</a>."
+                message=f"The payment for the rental of '{transaction.listing.listing_title}' from {booking.start_date} "
+                        f"to {booking.end_date} has been completed. The total amount is €{transaction.total_price:.2f}."
+                        f"View the booking <a href='{url_for('main.booking_details', booking_id=booking.booking_id)}'>here</a>."
             )
 
-            flash("Betaling succesvol verwerkt en boeking goedgekeurd!", "success")
+            flash("Payment successfully processed and booking approved!", "success")
             return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
 
         # Annuleer de transactie
@@ -922,16 +922,16 @@ def transaction_details(transaction_id):
             # Voeg meldingen toe
             add_notification(
                 receiver_id=transaction.renter_id,
-                message=f"Je boeking voor '{transaction.listing.listing_title}' van {booking.start_date} "
-                        f"tot {booking.end_date} is geannuleerd. De transactie is beëindigd."
+                message=f"Your booking for '{transaction.listing.listing_title}' from {booking.start_date} to "
+                        f"{booking.end_date} has been canceled. The transaction has been terminated."
             )
             add_notification(
                 receiver_id=listing.provider_id,
-                message=f"De huurder heeft de boeking voor '{transaction.listing.listing_title}' van {booking.start_date} "
-                        f"tot {booking.end_date} geannuleerd. De transactie is beëindigd."
+                message=f"The tenant has canceled the booking for '{transaction.listing.listing_title}' from "
+                        f"{booking.start_date} to {booking.end_date}. The transaction has been terminated."
             )
 
-            flash("De transactie en bijbehorende boeking zijn geannuleerd.", "info")
+            flash("The transaction and the associated booking have been canceled.", "info")
             return redirect(url_for('main.transaction_details', transaction_id=transaction_id))
 
     return render_template(

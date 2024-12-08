@@ -1,9 +1,3 @@
-DONE - Bij booking details moet als provider dan informatie komen over de huurder en mogelijkheid om review te schrijven (momenteel staat er informatie over jezelf en kan je geen review schrijven)
-- Nog een fee toevoegen voor ons
 - Database vullen met zoekertjes/users/reviews/...
-- Alle notificaties in Engels
-DONE - Bij edit listing nog flash toevoegen
 - !ALGORITME!
--> In dashboard een extra performance link, nieuwe view page zetten
-- per locatie, per type vehicle
-DONE - bij cancelled booking moet bericht onder review van "alleen mogelijk na datum reviewen" veranderen naar "niet mogelijk bij cancelled booking"
+- requirements.txt up to date zetten
