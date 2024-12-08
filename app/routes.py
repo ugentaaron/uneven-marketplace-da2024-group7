@@ -547,6 +547,15 @@ def index():
         username = user.username
         notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()
         notifications_unread_count = len(notifications)
+        if user:
+           username = user.username
+           notifications = Notification.query.filter_by(receiver_id=user.id, viewed=False).all()
+           notifications_unread_count = len(notifications)
+        else:
+            app.logger.warning(f"Geen gebruiker gevonden met user_id {session['user_id']}")
+
+    
+
 
     # Template renderen
     return render_template(
