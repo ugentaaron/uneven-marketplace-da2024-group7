@@ -51,7 +51,7 @@
                 <p><strong>Address:</strong> {{ renter.address }}</p>
                 <p><strong>Average Rating:</strong>
                     {% if renter.received_feedback %}
-                        {{ "%.1f"|format(renter.average_rating) }} / 5
+                        {{ "%.1f"|format(renter.review_score) }} / 5
                     {% else %}
                         No reviews yet
                     {% endif %}
@@ -72,8 +72,8 @@
                 <p><strong>Phone:</strong> {{ provider.phone_number }}</p>
                 <p><strong>Address:</strong> {{ provider.address }}</p>
                 <p><strong>Average Rating:</strong>
-                    {% if average_review_score %}
-                        {{ "%.1f"|format(average_review_score) }} / 5
+                    {% if provider.received_feedback %}
+                        {{ "%.1f"|format(provider.review_score) }} / 5
                     {% else %}
                         No reviews yet
                     {% endif %}
@@ -94,7 +94,7 @@
                             <p><strong>Rating:</strong> {{ existing_review.rating }} / 5</p>
                             <p><strong>Comment:</strong> {{ existing_review.comment }}</p>
                             <p class="text-muted"><i>Review left on {{ existing_review.created_at }}</i></p>
-                        {% elif can_review %}
+                        {% elif can_renter_review %}
                             <form method="POST" action="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}">
                                 <input type="hidden" name="action" value="submit_review">
                                 <div class="mb-3">
