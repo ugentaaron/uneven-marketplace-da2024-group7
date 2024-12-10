@@ -1,3 +1,5 @@
 - Database vullen met zoekertjes/users/reviews/...
 - !ALGORITME!
-- requirements.txt up to date zetten DONE
+- change the previous pictures in upload/ to the supabase
+- image on booking page isn't loading
+- reviews on booking page after placing a review it's showing 'you can only review after the end of the booking' should say the review instead

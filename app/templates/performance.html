@@ -103,29 +103,59 @@
                 {% endif %}
             </div>
         </div>
+        </div>
         <div class="container my-5">
             <div class="card mb-4">
                 <div class="card-body">
-                    <h3>Performance Analysis</h3>
-                    {% if performance_analysis.rank %}
-                    <p>
-                        Your listing is currently ranked <strong>{{ performance_analysis.rank_display }}</strong> in 
-                        {{ listing_performance.location }} for {{ listing_performance.vehicle_type }}.
-                    </p>
+                    <h3>Revenue Prediction & Historical Data</h3>
+                    {% if monthly_revenue_data and monthly_revenue_data|length > 0 %}
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Actual Data Previous Months</th>
+                                    <th>Revenue (€)</th>
+                                    <th>Bookings</th>
+                                    <th>Rented Days</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in monthly_revenue_data %}
+                                    <tr>
+                                        <td>{{ row.month }}</td>
+                                        <td>€{{ "%.2f"|format(row.revenue) }}</td>
+                                        <td>{{ row.bookings }}</td>
+                                        <td>{{ "%.1f"|format(row.rented_days) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     {% else %}
-                        <p>Your listing does not have enough data for ranking.</p>
+                        <p class="text-muted">Not enough data to display history.</p>
                     {% endif %}
-                    <p>
-                        {% if performance_analysis.outperforming %}
-                            <span class="text-success">Your listing is outperforming similar listings!</span>
-                            {% if performance_analysis.suggest_price_increase %}
-                                <br>Consider increasing the price for better profit.
-                            {% endif %}
-                        {% else %}
-                            <span class="text-warning">Your listing is not performing as expected.</span>
-                            <br>Consider adjusting your strategy.
-                        {% endif %}
-                    </p>
+
+                    <h3>Revenue Prediction</h3>
+                    {% if revenue_predictions and revenue_predictions|length > 0 %}
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Predicted Revenue (€)</th>
+                                    <th>Predicted Rented Days</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prediction in revenue_predictions %}
+                                    <tr>
+                                        <td>{{ prediction.month }}</td>
+                                        <td>€{{ "%.2f"|format(prediction.predicted_revenue) }}</td>
+                                        <td>{{ "%.1f"|format(prediction.predicted_rented_days) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted">Not enough data to make predictions.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

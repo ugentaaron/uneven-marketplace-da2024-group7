@@ -96,7 +96,7 @@
                             <p class="text-muted"><i>Review left on {{ existing_review.created_at }}</i></p>
                         {% elif can_renter_review %}
                             <form method="POST" action="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}">
-                                <input type="hidden" name="action" value="submit_review">
+                                <input type="hidden" name="action" value="submit_renter_review">
                                 <div class="mb-3">
                                     <label for="rating" class="form-label">Rating (1-5)</label>
                                     <input type="number" name="rating" id="rating" class="form-control" min="1" max="5" required>

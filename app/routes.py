@@ -1,16 +1,18 @@
-from datetime import datetime, timedelta
-import os
-import uuid
+
 
 from flask import Blueprint, session, request, redirect, url_for, render_template, flash, current_app, send_from_directory
 from werkzeug.utils import secure_filename
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from sqlalchemy.orm import aliased
 
 from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle, Booking
 from app.utils import allowed_file
 from supabase import create_client, Client
 
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+import os
+import uuid
 
 main = Blueprint('main', __name__)
 
@@ -1150,6 +1152,74 @@ def performance():
 
     selected_listing = Listing.query.get_or_404(listing_id)
 
+    # Bereken maandelijkse data (omzet, boekingen, gehuurde dagen)
+    monthly_data = db.session.query(
+        func.date_trunc('month', Booking.start_date).label('month'),
+        func.sum(Transaction.total_price).label('revenue'),
+        func.count(Booking.booking_id).label('bookings'),
+        func.sum((Booking.end_date - Booking.start_date) * 1.0).label('rented_days')
+    ).join(Transaction, Transaction.id == Booking.transaction_id) \
+    .filter(
+        Booking.listing_id == listing_id,
+        Transaction.status == "processed",
+        Booking.start_date <= datetime.utcnow()
+    ).group_by(func.date_trunc('month', Booking.start_date)) \
+    .order_by(func.date_trunc('month', Booking.start_date).desc()) \
+    .all()
+
+    # Format maandelijkse data voor rendering in de frontend
+    monthly_revenue_data = [
+        {
+            "month": row.month.strftime("%B %Y"),
+            "revenue": float(row.revenue or 0),
+            "bookings": row.bookings,
+            "rented_days": float(row.rented_days or 0)
+        }
+        for row in reversed(monthly_data)  # Reverse the order here
+    ]
+
+
+
+    # Bereken gemiddeldes voor de laatste 2 maanden
+    if len(monthly_data) >= 2:
+        avg_rented_days = sum(row.rented_days or 0 for row in monthly_data[:2]) / 2
+        avg_revenue = sum(row.revenue or 0 for row in monthly_data[:2]) / 2
+    else:
+        avg_rented_days = 0
+        avg_revenue = 0
+
+    # Voorspel huidige maand (op basis van de vorige 2 maanden)
+    predicted_rented_days = [avg_rented_days]  # Start met december
+
+    # Dynamisch berekenen voor januari en februari
+    for i in range(2):  # Voorspel voor januari en februari
+        if i == 0:  # Eerste iteratie: januari
+            # Gebruik november en december (december is al voorspeld)
+            next_prediction = (predicted_rented_days[-1] + monthly_data[0].rented_days) / 2
+        else:  # Tweede iteratie: februari
+            # Gebruik de voorspellingen van december en januari
+            next_prediction = (predicted_rented_days[-1] + predicted_rented_days[-2]) / 2
+        predicted_rented_days.append(next_prediction)  # Voeg toe aan de lijst
+
+
+    print("----")
+
+    print(predicted_rented_days)
+    print("----")
+    
+    revenue_predictions = [
+        {
+            "month": (datetime.utcnow().replace(day=1) + relativedelta(months=offset)).strftime("%B %Y"),
+            "predicted_revenue": round(rented_days * float(selected_listing.price_per_day), 2),
+            "predicted_rented_days": round(rented_days, 2),  # Zorg voor nauwkeurigheid tot 2 decimalen
+        }
+        for offset, rented_days in enumerate(predicted_rented_days)
+    ]
+    # Debug prints voor controle
+    print("Monthly Revenue Data:", monthly_revenue_data)
+    print("Revenue Predictions:", revenue_predictions)
+
+
     # Bereken de prestaties van de geselecteerde listing
     listing_performance = db.session.query(
         Listing.listing_title,
@@ -1252,5 +1322,8 @@ def performance():
         listing_performance=listing_performance,
         listing_revenue_data=listing_revenue_data,
         city_comparison=city_comparison,
-        performance_analysis=performance_analysis
+        monthly_revenue_data=monthly_revenue_data,
+        revenue_predictions=revenue_predictions,
+        avg_rented_days=avg_rented_days,
+        avg_revenue=avg_revenue
     )
