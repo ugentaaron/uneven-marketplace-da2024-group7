@@ -3,7 +3,7 @@ from werkzeug.utils import secure_filename
 from sqlalchemy import func, extract
 from sqlalchemy.orm import aliased
 
-from .models import db, User, Listing, Notification, Category, Transaction, UserReview, CategoryListing, Vehicle, Booking
+from .models import db, User, Listing, Notification, Category, Transaction, UserReview, Vehicle, Booking
 from app.utils import allowed_file
 from supabase import create_client, Client
 
@@ -152,14 +152,6 @@ def add_listing():
                 created_at=datetime.utcnow()
             )
             db.session.add(new_listing)
-            db.session.commit()
-
-            # Voeg CategoryListing toe
-            category_listing = CategoryListing(
-                listing_id=new_listing.id,
-                category_name=request.form['vehicle_type']
-            )
-            db.session.add(category_listing)
             db.session.commit()
 
             # Voeg voertuigdetails toe
@@ -579,59 +571,6 @@ def index():
         total_bookings=total_bookings,
         total_transactions=total_transactions
     )
-
-
-
-@main.route('/search', methods=['GET'])
-def search():
-    # Verkrijg de zoekparameters van de request
-    vehicle_type = request.args.get('vehicle_type')
-    location = request.args.get('location')
-    price_max = request.args.get('price_max')
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    sort_order = request.args.get('sort_order')  # Nieuw: sorteerparameter
-
-    # Start de query voor listings
-    query = Listing.query.filter_by(status='available')
-
-    # Voeg filters toe aan de query op basis van de zoekparameters
-    if vehicle_type:
-        query = query.join(CategoryListing).join(Category).filter(Category.name == vehicle_type)
-    if location:
-        query = query.filter(Listing.location.ilike(f'%{location}%'))
-    if price_max:
-        query = query.filter(Listing.price_per_day <= float(price_max))
-    if start_date:
-        query = query.filter(Listing.available_start <= start_date)
-    if end_date:
-        query = query.filter(Listing.available_end >= end_date)
-
-    # Sorteer de query op prijs
-    if sort_order == 'price_asc':
-        query = query.order_by(Listing.price_per_day.asc())
-    elif sort_order == 'price_desc':
-        query = query.order_by(Listing.price_per_day.desc())
-
-    # Verkrijg de gefilterde listings
-    listings = query.all()
-
-    # Verkrijg de lijst van categorieën voor de dropdown
-    categories = Category.query.all()
-
-    total_users = User.query.count()  
-    total_listings = Listing.query.count()  
-    rented_listings = Booking.query.filter_by(status='approved').count()
-    total_transactions = Transaction.query.count() 
-
-    return render_template('index.html', 
-        all_listings=listings, 
-        categories=categories,
-        total_users=total_users,
-        total_listings=total_listings,
-        rented_listings=rented_listings,
-        total_transactions=total_transactions
-)
 
 
 import pandas as pd

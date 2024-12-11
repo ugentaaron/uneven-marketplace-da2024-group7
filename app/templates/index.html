@@ -115,8 +115,9 @@
                 {% if has_more %}
                     <!-- Paginering sectie (vervangen door een link naar alle listings) -->
                     <div class="text-center mt-4">
-                        <a href="/all_listings?search_title={{ search_title }}&location={{ search_location }}&price_min={{ search_price_min }}&price_max={{ search_price_max }}"
-                            class="btn btn-success">View All Listings</a>
+                        <button type="button" class="btn btn-success btn-lg mt-3" onclick="window.location.href='/all_listings?search_title={{ search_title }}&location={{ search_location }}&price_min={{ search_price_min }}&price_max={{ search_price_max }}&start_date={{ search_start_date }}&end_date={{ search_end_date }}&vehicle_type={{ search_vehicle_type }}&sort_order={{ sort_order }}'">
+                            View More
+                        </button>
                     </div>
 
 
