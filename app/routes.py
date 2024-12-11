@@ -1,5 +1,3 @@
-
-
 from flask import Blueprint, session, request, redirect, url_for, render_template, flash, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, extract
@@ -503,7 +501,7 @@ def index():
     sort_order = request.args.get('sort_order', '')
 
     # Basisquery
-    category_alias = aliased(CategoryListing)
+    category_alias = aliased(Vehicle)
     query = Listing.query.filter_by(status='available')
 
     # Zoekfilter toepassen
@@ -521,7 +519,7 @@ def index():
         query = query.filter(Listing.end_date <= search_end_date)
     if search_vehicle_type:
         query = query.join(category_alias, category_alias.listing_id == Listing.id) \
-            .filter(category_alias.category_name == search_vehicle_type)
+            .filter(category_alias.vehicle_type == search_vehicle_type)
 
     # Sortering toepassen
     if sort_order == 'price_asc':
@@ -1090,7 +1088,7 @@ def all_listings():
     sort_order = request.args.get('sort_order', '')
 
     # Basisquery
-    category_alias = aliased(CategoryListing)
+    category_alias = aliased(Vehicle)
     query = Listing.query.filter_by(status='available')
 
     # Zoekfilters toepassen
@@ -1104,7 +1102,7 @@ def all_listings():
         query = query.filter(Listing.price_per_day <= search_price_max)
     if search_vehicle_type:
         query = query.join(category_alias, category_alias.listing_id == Listing.id) \
-            .filter(category_alias.category_name == search_vehicle_type)
+            .filter(category_alias.vehicle_type == search_vehicle_type)
 
     # Sortering
     if sort_order == "price_asc":
