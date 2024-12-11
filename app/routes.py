@@ -1121,18 +1121,24 @@ def performance():
     if len(monthly_data) >= 2:
         avg_rented_days = sum(row.rented_days or 0 for row in monthly_data[:2]) / 2
         avg_revenue = sum(row.revenue or 0 for row in monthly_data[:2]) / 2
+    elif len(monthly_data) == 1:  # Als slechts 1 maand beschikbaar is
+        avg_rented_days = monthly_data[0].rented_days or 0
+        avg_revenue = monthly_data[0].revenue or 0
     else:
         avg_rented_days = 0
         avg_revenue = 0
 
     # Voorspel huidige maand (op basis van de vorige 2 maanden)
-    predicted_rented_days = [avg_rented_days]  # Start met december
+    predicted_rented_days = [avg_rented_days, avg_rented_days] if avg_rented_days > 0 else [0, 0]
 
     # Dynamisch berekenen voor januari en februari
     for i in range(2):  # Voorspel voor januari en februari
-        if i == 0:  # Eerste iteratie: januari
+        if len(monthly_data) > 0 and i == 0:  # Eerste iteratie: januari
             # Gebruik november en december (december is al voorspeld)
             next_prediction = (predicted_rented_days[-1] + monthly_data[0].rented_days) / 2
+        elif i > 0:  # Tweede iteratie: gebruik voorspellingen
+            next_prediction = (predicted_rented_days[-1] + predicted_rented_days[-2]) / 2
+
         else:  # Tweede iteratie: februari
             # Gebruik de voorspellingen van december en januari
             next_prediction = (predicted_rented_days[-1] + predicted_rented_days[-2]) / 2
