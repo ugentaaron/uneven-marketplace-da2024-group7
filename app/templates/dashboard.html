@@ -54,7 +54,7 @@
                         <h5 class="card-title">Notifications</h5>
                         {% if notifications %}
                             <ul class="list-group">
-                                {% for notification in notifications %}
+                                {% for notification in notifications[:5] %}
                                     <li class="list-group-item">
                                         <p class="mb-1">{{ notification.message|safe }}</p>
                                     </li>
@@ -66,13 +66,14 @@
                     </div>
                 </div>
 
+
                 <!-- Written Reviews Section -->
                 <div class="card mb-4 shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">Written Reviews</h5>
                         {% if written_reviews %}
-                            <ul class="list-group">
-                                {% for review in written_reviews %}
+                            <ul class="list-group" id="reviews-list">
+                                {% for review in written_reviews[:5] %}
                                     <li class="list-group-item">
                                         <strong>For:</strong> {{ review.reviewed.username }}<br>
                                         {{ review.comment }}
@@ -80,19 +81,70 @@
                                     </li>
                                 {% endfor %}
                             </ul>
+                            {% if written_reviews|length > 5 %}
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-outline-success btn-sm" id="see-all-button" onclick="showAllReviews()">See All</button>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted">You haven't written any reviews yet.</p>
                         {% endif %}
                     </div>
                 </div>
 
+                <script>
+                    function showAllReviews() {
+                        const reviewsList = document.getElementById('reviews-list');
+                        reviewsList.innerHTML = `
+                            {% for review in written_reviews %}
+                                <li class="list-group-item">
+                                    <strong>For:</strong> {{ review.reviewed.username }}<br>
+                                    {{ review.comment }}
+                                    <p class="mb-0"><small>Rating: {{ review.rating }} / 5</small></p>
+                                </li>
+                            {% endfor %}
+                        `;
+                        // Hide "See All" button and show "See Less" button
+                        const seeAllButton = document.getElementById('see-all-button');
+                        seeAllButton.style.display = 'none';
+                        
+                        const seeLessButton = document.getElementById('see-less-button');
+                        seeLessButton.style.display = 'inline-block';
+                    }
+
+                    function showLessReviews() {
+                        const reviewsList = document.getElementById('reviews-list');
+                        reviewsList.innerHTML = `
+                            {% for review in written_reviews[:5] %}
+                                <li class="list-group-item">
+                                    <strong>For:</strong> {{ review.reviewed.username }}<br>
+                                    {{ review.comment }}
+                                    <p class="mb-0"><small>Rating: {{ review.rating }} / 5</small></p>
+                                </li>
+                            {% endfor %}
+                        `;
+                        // Hide "See Less" button and show "See All" button
+                        const seeAllButton = document.getElementById('see-all-button');
+                        seeAllButton.style.display = 'inline-block';
+
+                        const seeLessButton = document.getElementById('see-less-button');
+                        seeLessButton.style.display = 'none';
+                    }
+                </script>
+
+                <!-- Add the "See Less" button that will initially be hidden -->
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-success btn-sm" id="see-less-button" style="display: none;" onclick="showLessReviews()">See Less</button>
+                </div>
+
+                
                 <!-- Received Reviews Section -->
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">Received Reviews</h5>
                         {% if received_reviews %}
-                            <ul class="list-group">
-                                {% for review in received_reviews %}
+                            <ul class="list-group" id="received-reviews-list">
+                                {% for review in received_reviews[:5] %}
                                     <li class="list-group-item">
                                         <strong>From:</strong> {{ review.reviewer.username }}<br>
                                         {{ review.comment }}
@@ -100,16 +152,66 @@
                                     </li>
                                 {% endfor %}
                             </ul>
+                            {% if received_reviews|length > 5 %}
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-outline-success btn-sm" id="see-all-received-button" onclick="showAllReceivedReviews()">See All</button>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted">No reviews received yet.</p>
                         {% endif %}
                     </div>
                 </div>
+
+                <script>
+                    function showAllReceivedReviews() {
+                        const reviewsList = document.getElementById('received-reviews-list');
+                        reviewsList.innerHTML = `
+                            {% for review in received_reviews %}
+                                <li class="list-group-item">
+                                    <strong>From:</strong> {{ review.reviewer.username }}<br>
+                                    {{ review.comment }}
+                                    <p class="mb-0"><small>Rating: {{ review.rating }} / 5</small></p>
+                                </li>
+                            {% endfor %}
+                        `;
+                        // Hide "See All" button and show "See Less" button
+                        const seeAllButton = document.getElementById('see-all-received-button');
+                        seeAllButton.style.display = 'none';
+                        
+                        const seeLessButton = document.getElementById('see-less-received-button');
+                        seeLessButton.style.display = 'inline-block';
+                    }
+
+                    function showLessReceivedReviews() {
+                        const reviewsList = document.getElementById('received-reviews-list');
+                        reviewsList.innerHTML = `
+                            {% for review in received_reviews[:5] %}
+                                <li class="list-group-item">
+                                    <strong>From:</strong> {{ review.reviewer.username }}<br>
+                                    {{ review.comment }}
+                                    <p class="mb-0"><small>Rating: {{ review.rating }} / 5</small></p>
+                                </li>
+                            {% endfor %}
+                        `;
+                        // Hide "See Less" button and show "See All" button
+                        const seeAllButton = document.getElementById('see-all-received-button');
+                        seeAllButton.style.display = 'inline-block';
+
+                        const seeLessButton = document.getElementById('see-less-received-button');
+                        seeLessButton.style.display = 'none';
+                    }
+                </script>
+
+                <!-- Add the "See Less" button that will initially be hidden -->
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-success btn-sm" id="see-less-received-button" style="display: none;" onclick="showLessReceivedReviews()">See Less</button>
+                </div>
             </div>
 
             <!-- Right Column: Listings and Transactions -->
             <div class="col-md-8">
-		    <!-- Revenue Chart Section -->
+		        <!-- Revenue Chart Section -->
                 <div class="card mb-4 shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">Total Monthly Revenue</h5>
@@ -133,8 +235,8 @@
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {% for listing in own_listings %}
+                                    <tbody id="listings-tbody">
+                                        {% for listing in own_listings[:7] %}
                                             <tr>
                                                 <td>{{ listing.listing_title }}</td>
                                                 <td>{{ listing.status }}</td>
@@ -158,11 +260,86 @@
                                     </tbody>
                                 </table>
                             </div>
+                            {% if own_listings|length > 7 %}
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-outline-success btn-sm" id="see-all-listings-button" onclick="showAllListings()">See All</button>
+                                    <button class="btn btn-outline-success btn-sm" id="see-less-listings-button" style="display: none;" onclick="showLessListings()">See Less</button>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted">You haven't created any listings yet.</p>
                         {% endif %}
                     </div>
                 </div>
+
+                <script>
+                    function showAllListings() {
+                        const listingsTbody = document.getElementById('listings-tbody');
+                        listingsTbody.innerHTML = `
+                            {% for listing in own_listings %}
+                                <tr>
+                                    <td>{{ listing.listing_title }}</td>
+                                    <td>{{ listing.status }}</td>
+                                    <td>€{{ "%.2f"|format(listing.price_per_day) }}</td>
+                                    <td class="d-flex gap-1">
+                                        {% if listing.status == "deactivated" %}
+                                            <form method="POST" action="{{ url_for('main.activate_listing', listing_id=listing.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">Make Available</button>
+                                            </form>
+                                        {% elif listing.status == "available" %}
+                                            <form method="POST" action="{{ url_for('main.deactivate_listing', listing_id=listing.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                            </form>
+                                        {% endif %}
+                                        <a href="{{ url_for('main.view_listing', listing_id=listing.id) }}" class="btn btn-sm btn-success">View</a>
+                                        <a href="{{ url_for('main.edit_listing', listing_id=listing.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                                        <a href="{{ url_for('main.performance', listing_id=listing.id) }}" class="btn btn-sm btn-info">Performance</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        `;
+                        // Hide "See More" button and show "See Less" button
+                        const seeAllButton = document.getElementById('see-all-listings-button');
+                        seeAllButton.style.display = 'none';
+                        
+                        const seeLessButton = document.getElementById('see-less-listings-button');
+                        seeLessButton.style.display = 'inline-block';
+                    }
+
+                    function showLessListings() {
+                        const listingsTbody = document.getElementById('listings-tbody');
+                        listingsTbody.innerHTML = `
+                            {% for listing in own_listings[:7] %}
+                                <tr>
+                                    <td>{{ listing.listing_title }}</td>
+                                    <td>{{ listing.status }}</td>
+                                    <td>€{{ "%.2f"|format(listing.price_per_day) }}</td>
+                                    <td class="d-flex gap-1">
+                                        {% if listing.status == "deactivated" %}
+                                            <form method="POST" action="{{ url_for('main.activate_listing', listing_id=listing.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">Make Available</button>
+                                            </form>
+                                        {% elif listing.status == "available" %}
+                                            <form method="POST" action="{{ url_for('main.deactivate_listing', listing_id=listing.id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-warning">Deactivate</button>
+                                            </form>
+                                        {% endif %}
+                                        <a href="{{ url_for('main.view_listing', listing_id=listing.id) }}" class="btn btn-sm btn-success">View</a>
+                                        <a href="{{ url_for('main.edit_listing', listing_id=listing.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                                        <a href="{{ url_for('main.performance', listing_id=listing.id) }}" class="btn btn-sm btn-info">Performance</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        `;
+                        // Hide "See Less" button and show "See More" button
+                        const seeAllButton = document.getElementById('see-all-listings-button');
+                        seeAllButton.style.display = 'inline-block';
+
+                        const seeLessButton = document.getElementById('see-less-listings-button');
+                        seeLessButton.style.display = 'none';
+                    }
+                </script>
+
                 <!-- Bookings Section -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
@@ -180,8 +357,8 @@
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {% for booking in bookings %}
+                                    <tbody id="bookings-tbody">
+                                        {% for booking in bookings[:7] %}
                                             <tr>
                                                 <td>{{ booking.booking_id }}</td>
                                                 <td>{{ booking.listing.listing_title }}</td>
@@ -197,18 +374,91 @@
                                                     {% endif %}</td>
                                                 <td>{{ booking.start_date }} to {{ booking.end_date }}</td>
                                                 <td class="d-flex gap-1">
-                                                    <a href="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}" 
-                                                    class="btn btn-sm btn-success text-sm">View</a>                                                </td>
+                                                    <a href="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}" class="btn btn-sm btn-success text-sm">View</a>
+                                                </td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
+                            {% if bookings|length > 7 %}
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-outline-success btn-sm" id="see-all-bookings-button" onclick="showAllBookings()">See All</button>
+                                    <button class="btn btn-outline-success btn-sm" id="see-less-bookings-button" style="display: none;" onclick="showLessBookings()">See Less</button>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted">No booking history available.</p>
                         {% endif %}
                     </div>
                 </div>
+
+                <script>
+                    function showAllBookings() {
+                        const bookingsTbody = document.getElementById('bookings-tbody');
+                        bookingsTbody.innerHTML = `
+                            {% for booking in bookings %}
+                                <tr>
+                                    <td>{{ booking.booking_id }}</td>
+                                    <td>{{ booking.listing.listing_title }}</td>
+                                    <td>{{ booking.renter.username }}</td>
+                                    <td>{% if booking.status == "pending" %}
+                                            <span class="text-warning fw-bold">Pending</span>
+                                        {% elif booking.status == "approved" %}
+                                            <span class="text-success fw-bold">Approved</span>
+                                        {% elif booking.status == "cancelled" %}
+                                            <span class="text-danger fw-bold">Cancelled</span>
+                                        {% else %}
+                                            {{ booking.status }}
+                                        {% endif %}</td>
+                                    <td>{{ booking.start_date }} to {{ booking.end_date }}</td>
+                                    <td class="d-flex gap-1">
+                                        <a href="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}" class="btn btn-sm btn-success text-sm">View</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        `;
+                        // Hide "See More" button and show "See Less" button
+                        const seeAllButton = document.getElementById('see-all-bookings-button');
+                        seeAllButton.style.display = 'none';
+                        
+                        const seeLessButton = document.getElementById('see-less-bookings-button');
+                        seeLessButton.style.display = 'inline-block';
+                    }
+
+                    function showLessBookings() {
+                        const bookingsTbody = document.getElementById('bookings-tbody');
+                        bookingsTbody.innerHTML = `
+                            {% for booking in bookings[:7] %}
+                                <tr>
+                                    <td>{{ booking.booking_id }}</td>
+                                    <td>{{ booking.listing.listing_title }}</td>
+                                    <td>{{ booking.renter.username }}</td>
+                                    <td>{% if booking.status == "pending" %}
+                                            <span class="text-warning fw-bold">Pending</span>
+                                        {% elif booking.status == "approved" %}
+                                            <span class="text-success fw-bold">Approved</span>
+                                        {% elif booking.status == "cancelled" %}
+                                            <span class="text-danger fw-bold">Cancelled</span>
+                                        {% else %}
+                                            {{ booking.status }}
+                                        {% endif %}</td>
+                                    <td>{{ booking.start_date }} to {{ booking.end_date }}</td>
+                                    <td class="d-flex gap-1">
+                                        <a href="{{ url_for('main.booking_details', booking_id=booking.booking_id) }}" class="btn btn-sm btn-success text-sm">View</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        `;
+                        // Hide "See Less" button and show "See More" button
+                        const seeAllButton = document.getElementById('see-all-bookings-button');
+                        seeAllButton.style.display = 'inline-block';
+
+                        const seeLessButton = document.getElementById('see-less-bookings-button');
+                        seeLessButton.style.display = 'none';
+                    }
+                </script>
+
         
                 <!-- Transactions Section -->
                 <div class="card shadow-sm">
@@ -227,8 +477,8 @@
                                             <th>Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {% for transaction in transactions %}
+                                    <tbody id="transactions-tbody">
+                                        {% for transaction in transactions[:7] %}
                                             <tr>
                                                 <td>{{ transaction.id }}</td>
                                                 <td>{{ transaction.listing.listing_title }}</td>
@@ -253,11 +503,88 @@
                                     </tbody>
                                 </table>
                             </div>
+                            {% if transactions|length > 7 %}
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-outline-success btn-sm" id="see-all-transactions-button" onclick="showAllTransactions()">See All</button>
+                                    <button class="btn btn-outline-success btn-sm" id="see-less-transactions-button" style="display: none;" onclick="showLessTransactions()">See Less</button>
+                                </div>
+                            {% endif %}
                         {% else %}
                             <p class="text-muted">No transaction history available.</p>
                         {% endif %}
                     </div>
                 </div>
+
+                <script>
+                    function showAllTransactions() {
+                        const transactionsTbody = document.getElementById('transactions-tbody');
+                        transactionsTbody.innerHTML = `
+                            {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.id }}</td>
+                                    <td>{{ transaction.listing.listing_title }}</td>
+                                    <td>
+                                        {% if transaction.status == "pending" %}
+                                            <span class="text-warning fw-bold">Pending</span>
+                                        {% elif transaction.status == "processed" %}
+                                            <span class="text-success fw-bold">Processed</span>
+                                        {% elif transaction.status == "cancelled" %}
+                                            <span class="text-danger fw-bold">Cancelled</span>
+                                        {% else %}
+                                            {{ transaction.status }}
+                                        {% endif %}
+                                    </td>
+                                    <td>€{{ "%.2f"|format(transaction.total_price if transaction.total_price is not none else 0.0) }}</td>
+                                    <td>{{ transaction.created_at }}</td>
+                                    <td>
+                                        <a href="{{ url_for('main.transaction_details', transaction_id=transaction.id) }}" class="btn btn-sm btn-success">View</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        `;
+                        // Hide "See More" button and show "See Less" button
+                        const seeAllButton = document.getElementById('see-all-transactions-button');
+                        seeAllButton.style.display = 'none';
+                        
+                        const seeLessButton = document.getElementById('see-less-transactions-button');
+                        seeLessButton.style.display = 'inline-block';
+                    }
+
+                    function showLessTransactions() {
+                        const transactionsTbody = document.getElementById('transactions-tbody');
+                        transactionsTbody.innerHTML = `
+                            {% for transaction in transactions[:7] %}
+                                <tr>
+                                    <td>{{ transaction.id }}</td>
+                                    <td>{{ transaction.listing.listing_title }}</td>
+                                    <td>
+                                        {% if transaction.status == "pending" %}
+                                            <span class="text-warning fw-bold">Pending</span>
+                                        {% elif transaction.status == "processed" %}
+                                            <span class="text-success fw-bold">Processed</span>
+                                        {% elif transaction.status == "cancelled" %}
+                                            <span class="text-danger fw-bold">Cancelled</span>
+                                        {% else %}
+                                            {{ transaction.status }}
+                                        {% endif %}
+                                    </td>
+                                    <td>€{{ "%.2f"|format(transaction.total_price if transaction.total_price is not none else 0.0) }}</td>
+                                    <td>{{ transaction.created_at }}</td>
+                                    <td>
+                                        <a href="{{ url_for('main.transaction_details', transaction_id=transaction.id) }}" class="btn btn-sm btn-success">View</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        `;
+                        // Hide "See Less" button and show "See More" button
+                        const seeAllButton = document.getElementById('see-all-transactions-button');
+                        seeAllButton.style.display = 'inline-block';
+
+                        const seeLessButton = document.getElementById('see-less-transactions-button');
+                        seeLessButton.style.display = 'none';
+                    }
+                </script>
+
             </div>
         </div>
     </main>
