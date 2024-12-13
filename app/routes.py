@@ -261,12 +261,12 @@ def delete_listing(listing_id):
     listing = Listing.query.get_or_404(listing_id)
     if listing.provider_id != session['user_id']:
         flash("You are not authorized to delete this listing.", "danger")
-        return redirect(url_for('main.my_listings'))
+        return redirect(url_for('main.all_listings'))
 
     db.session.delete(listing)
     db.session.commit()
     flash("Listing deleted successfully.", "success")
-    return redirect(url_for('main.my_listings'))
+    return redirect(url_for('main.all_listings'))
 
 
 # Deactivate listing route
