@@ -15,12 +15,12 @@
         <header class="py-5">
             <div class="container text-start">
                 <h1 class="display-4 fw-bold">Edit Listing</h1>
-                <p class="lead">Update the details of your listing.</p>
+                <p class="lead">Update or delete the details of your listing.</p>
             </div>
         </header>
 
         <!-- Edit Listing Form -->
-        <form method="post" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data">
             <div class="row">
                 <!-- Left Column: Listing Details -->
                 <div class="col-md-6">
@@ -99,7 +99,13 @@
                 </div>
             </div>
 
+            <!-- Update Button -->
             <button type="submit" class="btn btn-success w-100 mt-4">Update Listing</button>
+        </form>
+
+        <!-- Delete Button -->
+        <form method="POST" action="{{ url_for('main.delete_listing', listing_id=listing.id) }}" onsubmit="return confirm('Are you sure you want to delete this listing?');">
+            <button type="submit" class="btn btn-danger w-100 mt-2">Delete Listing</button>
         </form>
     </div>
 
