@@ -10,18 +10,7 @@ class Category(db.Model):
 
     name = db.Column(db.String, primary_key=True)
 
-    listings = db.relationship('CategoryListing', back_populates='category')
-
-
-# CategoryListing Model (Many-to-Many)
-class CategoryListing(db.Model):
-    __tablename__ = 'CategoryListing'
-
-    category_name = db.Column('categoryName', db.String, db.ForeignKey('Category.name'), primary_key=True)
-    listing_id = db.Column('listingID', db.BigInteger, db.ForeignKey('Listing.listingID'), primary_key=True)
-
-    category = db.relationship('Category', back_populates='listings')
-    listing = db.relationship('Listing', back_populates='categories')
+    listings = db.relationship('Vehicle', back_populates='category')
 
 
 # User Model
@@ -65,7 +54,6 @@ class Listing(db.Model):
     provider = db.relationship('User', back_populates='listings')
     transactions = db.relationship('Transaction', back_populates='listing')
     reviews = db.relationship('UserReview', back_populates='listing')
-    categories = db.relationship('CategoryListing', back_populates='listing')
     vehicle = db.relationship('Vehicle', backref='listing', uselist=False)
 
     def deactivate_if_expired(self):
@@ -86,10 +74,12 @@ class Vehicle(db.Model):
     listing_id = db.Column('listingID', db.BigInteger, db.ForeignKey('Listing.listingID'), nullable=False)
     make = db.Column(db.Text, nullable=False)
     year = db.Column(db.Integer, nullable=False)
-    vehicle_type = db.Column('vehicleType', db.Text, nullable=False)
+    vehicle_type = db.Column('vehicleType', db.ForeignKey('Category.name'), nullable=False)
     fuel_type = db.Column('fuelType', db.Text, nullable=False)
     seats = db.Column('seats', db.SmallInteger, nullable=False)
     extra_features = db.Column('extraFeatures', db.Text, nullable=True)
+
+    category = db.relationship('Category', back_populates='listings')
 
     def __repr__(self):
         return f'<Vehicle {self.make}, {self.year}>'
@@ -111,6 +101,27 @@ class Transaction(db.Model):
 
     def __repr__(self):
         return f'<Transaction {self.id}, Status: {self.status}>'
+
+
+# Booking Model
+class Booking(db.Model):
+    __tablename__ = 'Bookings'
+
+    booking_id = db.Column('bookingID', db.BigInteger, primary_key=True)
+    listing_id = db.Column('listingID', db.BigInteger, db.ForeignKey('Listing.listingID'), nullable=False)
+    renter_id = db.Column('renterID', db.BigInteger, db.ForeignKey('User.userID'), nullable=False)
+    transaction_id = db.Column('transactionID', db.BigInteger, db.ForeignKey('Transaction.transactionID'), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.Enum('pending', 'cancelled', 'approved', name='transaction_status'), nullable=False, default='pending')
+    created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow, nullable=False)
+
+    listing = db.relationship('Listing', backref='bookings', lazy=True)
+    renter = db.relationship('User', backref='bookings', lazy=True)
+    transaction = db.relationship('Transaction', backref='bookings', lazy=True)
+
+    def __repr__(self):
+        return f"<Booking {self.booking_id} | Listing {self.listing_id} | Renter {self.renter_id} | Status {self.status}>"
 
 
 # Notification Model
@@ -147,25 +158,3 @@ class UserReview(db.Model):
 
     def __repr__(self):
         return f"<Review {self.review_id}, Rating: {self.rating}>"
-
-
-
-class Booking(db.Model):
-    __tablename__ = 'Bookings'
-
-    booking_id = db.Column('bookingID', db.BigInteger, primary_key=True)
-    listing_id = db.Column('listingID', db.BigInteger, db.ForeignKey('Listing.listingID'), nullable=False)
-    renter_id = db.Column('renterID', db.BigInteger, db.ForeignKey('User.userID'), nullable=False)
-    transaction_id = db.Column('transactionID', db.BigInteger, db.ForeignKey('Transaction.transactionID'), nullable=False)
-    start_date = db.Column(db.Date, nullable=False)
-    end_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.Enum('pending', 'cancelled', 'approved', name='transaction_status'), nullable=False, default='pending')
-    created_at = db.Column('createdAt', db.DateTime, default=datetime.utcnow, nullable=False)
-
-    # Relationships
-    listing = db.relationship('Listing', backref='bookings', lazy=True)
-    renter = db.relationship('User', backref='bookings', lazy=True)
-    transaction = db.relationship('Transaction', backref='bookings', lazy=True)
-
-    def __repr__(self):
-        return f"<Booking {self.booking_id} | Listing {self.listing_id} | Renter {self.renter_id} | Status {self.status}>"
