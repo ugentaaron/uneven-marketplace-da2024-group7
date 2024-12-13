@@ -10,19 +10,15 @@
     {% include 'header.html' %}
     {% include 'notifications_flask.html' %}
 
-    <!-- Main Container -->
     <div class="container my-5">
         <header class="py-5">
-            <div class="container text-start">
-                <h1 class="display-4 fw-bold">Add New Listing</h1>
-                <p class="lead">Provide the details for the new listing.</p>
-            </div>
+            <h1 class="display-4 fw-bold">Add New Listing</h1>
+            <p class="lead">Provide the details for the new listing.</p>
         </header>
 
-        <!-- Add Listing Form -->
         <form method="post" enctype="multipart/form-data">
             <div class="row">
-                <!-- Left Column: Listing Details -->
+                <!-- Listing Details -->
                 <div class="col-md-6">
                     <h2>Listing Details</h2>
                     <div class="mb-3">
@@ -58,7 +54,7 @@
                     </div>
                 </div>
 
-                <!-- Right Column: Vehicle Details -->
+                <!-- Vehicle Details -->
                 <div class="col-md-6">
                     <h2>Vehicle Details</h2>
                     <div class="mb-3">
@@ -71,7 +67,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="vehicle_type" class="form-label">Vehicle Type</label>
-                        <select name="vehicle_type" class="form-select" id="vehicle_type" required>
+                        <select name="vehicle_type" class="form-select" id="vehicle_type" required onchange="toggleFuelType()">
                             {% for category in categories %}
                                 <option value="{{ category.name }}">{{ category.name }}</option>
                             {% endfor %}
@@ -106,6 +102,26 @@
     <footer class="bg-dark text-white text-center py-4 mt-5">
         <p class="mb-0">&copy; 2024 RentYourRide. All rights reserved.</p>
     </footer>
+
+    <!-- JavaScript -->
+    <script>
+        function toggleFuelType() {
+            const vehicleType = document.getElementById('vehicle_type').value;
+            const fuelTypeField = document.getElementById('fuel_type');
+
+            if (vehicleType.toLowerCase() === 'bicycle') {
+                fuelTypeField.value = ''; // Clear the value
+                fuelTypeField.disabled = true; // Disable the field
+            } else {
+                fuelTypeField.disabled = false; // Enable the field
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleFuelType(); // Call once on load
+        });
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
