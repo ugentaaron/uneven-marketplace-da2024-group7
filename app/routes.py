@@ -105,18 +105,15 @@ def add_listing():
 
     if request.method == 'POST':
         try:
-            # Validatie van datums
             available_start = datetime.strptime(request.form['available_start'], '%Y-%m-%d')
             available_end = datetime.strptime(request.form['available_end'], '%Y-%m-%d')
             if available_end < available_start:
                 flash("The end date cannot be earlier than the start date.", "danger")
                 return redirect(request.url)
 
-            # Bestand uploaden naar Supabase Storage
             file = request.files.get('listing_images')
             picture_path = None
             if file and allowed_file(file.filename):
-                # Genereer een unieke bestandsnaam met UUID en originele extensie
                 filename = secure_filename(file.filename)
                 file_extension = filename.split('.')[-1]
                 unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
@@ -124,12 +121,8 @@ def add_listing():
                 file_path = f"uploads/{unique_filename}"
 
                 try:
-                    # Lees het bestand in bytes
-                    file_bytes = file.read()  # Lees de inhoud van het bestand als bytes
-                    # Upload de bytes naar Supabase
+                    file_bytes = file.read()  
                     upload_response = supabase.storage.from_(bucket_name).upload(file_path, file_bytes)
-
-                    # Verkrijg de publieke URL van het bestand
                     picture_path = supabase.storage.from_(bucket_name).get_public_url(file_path)
                 except Exception as e:
                     flash(f"Failed to upload image: {e}", "danger")
@@ -138,7 +131,6 @@ def add_listing():
                 flash("No valid file uploaded or file type is not allowed.", "danger")
                 return redirect(request.url)
 
-            # Nieuwe listing aanmaken in Supabase
             new_listing = Listing(
                 listing_title=request.form['listing_name'],
                 price_per_day=float(request.form['price']),
@@ -147,20 +139,25 @@ def add_listing():
                 available_end=request.form['available_end'],
                 description=request.form['description'],
                 status=request.form.get('status', 'available'),
-                picture=picture_path,  # Gebruik de URL van Supabase
+                picture=picture_path,  
                 provider_id=session['user_id'],
                 created_at=datetime.utcnow()
             )
             db.session.add(new_listing)
             db.session.commit()
 
-            # Voeg voertuigdetails toe
+            vehicle_type = request.form['vehicle_type']
+            fuel_type = request.form.get('fuel_type')
+
+            if vehicle_type.lower() == 'bicycle':
+                fuel_type = None  
+
             vehicle = Vehicle(
                 listing_id=new_listing.id,
                 make=request.form['make'],
                 year=int(request.form['year']),
-                vehicle_type=request.form['vehicle_type'],
-                fuel_type=request.form['fuel_type'],
+                vehicle_type=vehicle_type,
+                fuel_type=fuel_type,  
                 seats=int(request.form['seats']),
                 extra_features=request.form.get('extra_features', '')
             )
