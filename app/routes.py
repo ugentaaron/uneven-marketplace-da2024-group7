@@ -1112,8 +1112,6 @@ def performance():
         for row in reversed(monthly_data)  # Reverse the order here
     ]
 
-
-
     # Bereken gemiddeldes voor de laatste 2 maanden
     if len(monthly_data) >= 2:
         avg_rented_days = sum(row.rented_days or 0 for row in monthly_data[:2]) / 2
@@ -1142,8 +1140,7 @@ def performance():
         predicted_rented_days.append(next_prediction)  # Voeg toe aan de lijst
 
 
-    print("----")
-
+    print("----") #Debuggen
     print(predicted_rented_days)
     print("----")
     
@@ -1265,5 +1262,8 @@ def performance():
         monthly_revenue_data=monthly_revenue_data,
         revenue_predictions=revenue_predictions,
         avg_rented_days=avg_rented_days,
-        avg_revenue=avg_revenue
+        avg_revenue=avg_revenue,
+        performance_analysis=performance_analysis,
+        monthly_data=monthly_data,
+        enumerate=enumerate
     )

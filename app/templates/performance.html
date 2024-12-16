@@ -70,7 +70,6 @@
                 }
             });
         </script>
-        
         <!-- Comparison with Other Listings -->
         <div class="card">
             <div class="card-body">
@@ -79,6 +78,7 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
+                                <th>Position</th>
                                 <th>Listing Title</th>
                                 <th>Vehicle Type</th>
                                 <th>Total Bookings</th>
@@ -87,8 +87,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for comparison in city_comparison %}
+                            {% for index, comparison in enumerate(city_comparison) %}
                                 <tr>
+                                    <td>{{ index + 1 }}</td>
                                     <td>{{ comparison.listing_title }}</td>
                                     <td>{{ comparison.vehicle_type }}</td>
                                     <td>{{ comparison.total_bookings }}</td>
@@ -98,6 +99,9 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <p class="mt-3">
+                        <strong>Your Car's Rank:</strong> {{ performance_analysis.rank_display }}
+                    </p>
                 {% else %}
                     <p class="text-muted">No comparable listings found in this location.</p>
                 {% endif %}
