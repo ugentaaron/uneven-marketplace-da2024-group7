@@ -1183,10 +1183,10 @@ def performance():
             func.coalesce(processed_transactions.c.total_revenue, 0.0).label('total_revenue'),
             func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating'),
         )
-        .join(Vehicle, Vehicle.listing_id == Listing.id)
-        .join(approved_bookings, approved_bookings.c.listing_id == Listing.id)
-        .join(processed_transactions, processed_transactions.c.listing_id == Listing.id)
-        .join(UserReview, UserReview.listing_id == Listing.id)
+        .outerjoin(Vehicle, Vehicle.listing_id == Listing.id)
+        .outerjoin(approved_bookings, approved_bookings.c.listing_id == Listing.id)
+        .outerjoin(processed_transactions, processed_transactions.c.listing_id == Listing.id)
+        .outerjoin(UserReview, UserReview.listing_id == Listing.id)
         .filter(Listing.id == listing_id)
         .group_by(
             Listing.id,
