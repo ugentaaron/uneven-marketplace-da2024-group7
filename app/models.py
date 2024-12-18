@@ -65,7 +65,7 @@ class Listing(db.Model):
         return f'<Listing {self.listing_title}, ${self.price_per_day}>'
 
 
-# Vehicle Model (One-to-One with Listing)
+# Vehicle Model
 class Vehicle(db.Model):
     __tablename__ = 'Vehicle'
 

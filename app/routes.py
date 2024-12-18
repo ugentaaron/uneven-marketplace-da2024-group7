@@ -1074,7 +1074,6 @@ def deactivate_expired_listings():
     db.session.commit()
 
 
-
 @main.route('/performance', methods=['GET'])
 def performance():
     if 'user_id' not in session:
@@ -1133,17 +1132,15 @@ def performance():
             next_prediction = (predicted_rented_days[-1] + monthly_data[0].rented_days) / 2
         elif i > 0:  # Tweede iteratie: gebruik voorspellingen
             next_prediction = (predicted_rented_days[-1] + predicted_rented_days[-2]) / 2
-
         else:  # Tweede iteratie: februari
             # Gebruik de voorspellingen van december en januari
             next_prediction = (predicted_rented_days[-1] + predicted_rented_days[-2]) / 2
         predicted_rented_days.append(next_prediction)  # Voeg toe aan de lijst
 
-
-    print("----") #Debuggen
+    print("----")  # Debuggen
     print(predicted_rented_days)
     print("----")
-    
+
     revenue_predictions = [
         {
             "month": (datetime.utcnow().replace(day=1) + relativedelta(months=offset)).strftime("%B %Y"),
@@ -1156,39 +1153,61 @@ def performance():
     print("Monthly Revenue Data:", monthly_revenue_data)
     print("Revenue Predictions:", revenue_predictions)
 
-
     # Bereken de prestaties van de geselecteerde listing
+    approved_bookings = aliased(
+        db.session.query(
+            Booking.listing_id,
+            func.count(func.distinct(Booking.booking_id)).label('total_bookings')
+        )
+        .filter(Booking.status == 'approved')
+        .group_by(Booking.listing_id)
+        .subquery()
+    )
 
-    processed_transactions = db.session.query(
-        Transaction.id.label('transaction_id'),
-        Transaction.total_price.label('total_price')
-    ).filter(Transaction.status == "processed").subquery()
+    processed_transactions = aliased(
+        db.session.query(
+            Transaction.listing_id,
+            func.coalesce(func.sum(Transaction.total_price), 0.0).label('total_revenue')
+        )
+        .filter(Transaction.status == "processed")
+        .group_by(Transaction.listing_id)
+        .subquery()
+    )
 
+    listing_performance = (
+        db.session.query(
+            Listing.listing_title,
+            Listing.location,
+            Vehicle.vehicle_type,
+            func.coalesce(approved_bookings.c.total_bookings, 0).label('total_bookings'),
+            func.coalesce(processed_transactions.c.total_revenue, 0.0).label('total_revenue'),
+            func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating'),
+        )
+        .join(Vehicle, Vehicle.listing_id == Listing.id)
+        .join(approved_bookings, approved_bookings.c.listing_id == Listing.id)
+        .join(processed_transactions, processed_transactions.c.listing_id == Listing.id)
+        .join(UserReview, UserReview.listing_id == Listing.id)
+        .filter(Listing.id == listing_id)
+        .group_by(
+            Listing.id,
+            Listing.listing_title,
+            Listing.location,
+            Vehicle.vehicle_type,
+            approved_bookings.c.total_bookings,
+            processed_transactions.c.total_revenue
+        )
+        .first()
+    )
 
-    listing_performance = db.session.query(
-    Listing.listing_title,
-    Listing.location,
-    Vehicle.vehicle_type,
-    func.count(func.distinct(Booking.booking_id)).label('total_bookings'),  # Unieke processed bookings
-    func.coalesce(func.sum(processed_transactions.c.total_price), 0.0).label('total_revenue'),  # Unieke processed revenue
-    func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating')  # Gemiddelde rating
-    ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
-    .join(Booking, Booking.listing_id == Listing.id, isouter=True) \
-    .join(processed_transactions, processed_transactions.c.transaction_id == Booking.transaction_id, isouter=True) \
-    .outerjoin(UserReview, UserReview.listing_id == Listing.id) \
-    .filter(Listing.id == listing_id) \
-    .group_by(Listing.id, Listing.location, Vehicle.vehicle_type) \
-    .first()
-        
     # Omzetgegevens per datum (voor grafiek)
     revenue_by_date = db.session.query(
         Booking.start_date.label('date'),
         func.sum(Transaction.total_price).label('revenue')
     ).join(Transaction, Transaction.id == Booking.transaction_id) \
-     .filter(Booking.listing_id == listing_id, Transaction.status == "processed") \
-     .group_by(Booking.start_date) \
-     .order_by(Booking.start_date) \
-     .all()
+        .filter(Booking.listing_id == listing_id, Transaction.status == "processed") \
+        .group_by(Booking.start_date) \
+        .order_by(Booking.start_date) \
+        .all()
 
     # Formatteer omzetgegevens voor Chart.js
     listing_revenue_data = [
@@ -1196,48 +1215,79 @@ def performance():
         for row in revenue_by_date
     ]
 
-    # Vergelijk met andere listings in dezelfde stad en van hetzelfde voertuigtype
-    city_comparison = db.session.query(
-        Listing.listing_title,
-        Vehicle.vehicle_type,
-        func.count(Booking.booking_id).label('total_bookings'),
-        func.coalesce(func.sum(Transaction.total_price), 0.0).label('total_revenue'),
-        func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating')
-    ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
-     .join(Booking, Booking.listing_id == Listing.id, isouter=True) \
-     .join(Transaction, Transaction.id == Booking.transaction_id, isouter=True) \
-     .join(UserReview, UserReview.listing_id == Listing.id, isouter=True) \
-     .filter(
-         Listing.location == selected_listing.location,
-         Listing.id != listing_id,
-         Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type
-     ).group_by(Listing.id, Vehicle.vehicle_type) \
-     .all()
+    # Fetch comparison data for other listings in the same city and with the same vehicle type
+    city_comparison = (
+        db.session.query(
+            Listing.id.label('listing_id'),  # Alias 'id' as 'listing_id'
+            Listing.listing_title,
+            Vehicle.vehicle_type,
+            func.coalesce(approved_bookings.c.total_bookings, 0).label('total_bookings'),  # Using the aliased subquery
+            func.coalesce(processed_transactions.c.total_revenue, 0.0).label('total_revenue'),  # Using the aliased subquery
+            func.coalesce(func.avg(UserReview.rating), 0.0).label('average_rating')
+        )
+        .join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True)
+        .join(approved_bookings, approved_bookings.c.listing_id == Listing.id, isouter=True)
+        .join(processed_transactions, processed_transactions.c.listing_id == Listing.id, isouter=True)
+        .join(UserReview, UserReview.listing_id == Listing.id, isouter=True)
+        .filter(
+            Listing.location == selected_listing.location,  # Exclude the current listing
+            Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type
+        )
+        .group_by(
+            Listing.id,
+            Listing.listing_title,
+            Listing.location,
+            Vehicle.vehicle_type,
+            approved_bookings.c.total_bookings,
+            processed_transactions.c.total_revenue
+        )
+        .order_by(func.coalesce(processed_transactions.c.total_revenue, 0.0).desc())  # Sort by revenue
+        .all()
+    )
 
-    # Bereken rangschikking op basis van omzet
-    city_rankings = db.session.query(
-        Listing.id,
-        func.coalesce(func.sum(Transaction.total_price), 0.0).label('total_revenue')
-    ).join(Vehicle, Vehicle.listing_id == Listing.id, isouter=True) \
-     .join(Booking, Booking.listing_id == Listing.id, isouter=True) \
-     .join(Transaction, Transaction.id == Booking.transaction_id, isouter=True) \
-     .filter(
-         Listing.location == selected_listing.location,
-         Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type
-     ).group_by(Listing.id) \
-     .order_by(func.coalesce(func.sum(Transaction.total_price), 0.0).desc()) \
-     .all()
-    
-    # Bepaal rang van de geselecteerde listing
+    # Ranking logic
+    city_rankings = (
+        db.session.query(
+            Listing.id,
+            Listing.listing_title,
+            Vehicle.vehicle_type,
+            func.coalesce(processed_transactions.c.total_revenue, 0.0).label('total_revenue')
+        )
+        .outerjoin(Vehicle, Vehicle.listing_id == Listing.id)
+        .outerjoin(approved_bookings, approved_bookings.c.listing_id == Listing.id)
+        .outerjoin(processed_transactions, processed_transactions.c.listing_id == Listing.id)
+        .filter(
+            Listing.location == selected_listing.location,
+            Vehicle.vehicle_type == selected_listing.vehicle.vehicle_type
+        )
+        .group_by(
+            Listing.id,
+            Listing.listing_title,
+            Listing.location,
+            Vehicle.vehicle_type,
+            approved_bookings.c.total_bookings,
+            processed_transactions.c.total_revenue
+        )
+        .order_by(func.coalesce(processed_transactions.c.total_revenue, 0.0).desc())  # Sort by revenue
+        .all()
+    )
+
+    # Calculate rank for the selected listing
     rank = next((index + 1 for index, row in enumerate(city_rankings) if row.id == listing_id), None)
+
+    # Total number of listings in the same city and vehicle type (including your own listing)
     total_listings = len(city_rankings)
 
-    rank_display = f"{rank} out of {total_listings}"
-    if rank == 1:
-        rank_display = f"#1 (Top Performer) out of {total_listings}"
+    # Rank display
+    rank_display = f"{rank} of {total_listings}"
 
+    # Add a label for the top position
+    if rank == 1:
+        rank_display = f"#1 (Top Performer) of {total_listings}"
+
+    # Include this rank_display and other performance details in the performance analysis
     performance_analysis = {
-        "outperforming": False,
+        "outperforming": rank == 1,
         "suggest_price_increase": False,
         "recommendation": "Your listing is performing as expected.",
         "rank_display": rank_display,
